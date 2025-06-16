@@ -1,360 +1,292 @@
-
-// Main JavaScript file for Pivot Platform
-
-// Global variables
 let socket;
 
-// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-function initializeApp() {
-    // Initialize tooltips
-    initializeTooltips();
+    // Inicializar Socket.IO
+    if (typeof io !== 'undefined') {
+        socket = io();
+        
+        socket.on('connect', function() {
+            console.log('Conectado ao servidor');
+        });
+        
+        socket.on('disconnect', function() {
+            console.log('Desconectado do servidor');
+        });
+    }
     
-    // Initialize form validations
-    initializeFormValidations();
+    // Gerenciar formulários globalmente
+    setupFormHandlers();
     
-    // Initialize smooth scrolling
-    initializeSmoothScrolling();
-    
-    // Initialize auto-hide alerts
-    initializeAutoHideAlerts();
-    
-    // Initialize loading states
-    initializeLoadingStates();
+    // Verificar se é página de chat
+    if (document.body.getAttribute('data-page') === 'chat-conversation') {
+        initializeChat();
+    }
     
     console.log('Pivot Platform initialized');
-}
+});
 
-// Initialize Bootstrap tooltips
-function initializeTooltips() {
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-}
-
-// Form validation enhancements
-function initializeFormValidations() {
-    const forms = document.querySelectorAll('.needs-validation');
-    
-    Array.prototype.slice.call(forms).forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        }, false);
-    });
-    
-    // Real-time validation for specific fields
-    const emailInputs = document.querySelectorAll('input[type="email"]');
-    emailInputs.forEach(input => {
-        input.addEventListener('blur', validateEmail);
-    });
-    
-    const passwordInputs = document.querySelectorAll('input[type="password"]');
-    passwordInputs.forEach(input => {
-        input.addEventListener('input', validatePassword);
-    });
-}
-
-// Email validation
-function validateEmail(event) {
-    const email = event.target.value;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValid = emailRegex.test(email);
-    
-    if (email && !isValid) {
-        event.target.classList.add('is-invalid');
-        showFieldError(event.target, 'Please enter a valid email address');
-    } else {
-        event.target.classList.remove('is-invalid');
-        hideFieldError(event.target);
-    }
-}
-
-// Password validation
-function validatePassword(event) {
-    const password = event.target.value;
-    const minLength = 6;
-    
-    if (password.length > 0 && password.length < minLength) {
-        event.target.classList.add('is-invalid');
-        showFieldError(event.target, `Password must be at least ${minLength} characters long`);
-    } else {
-        event.target.classList.remove('is-invalid');
-        hideFieldError(event.target);
-    }
-}
-
-// Show field error
-function showFieldError(field, message) {
-    let errorDiv = field.parentNode.querySelector('.invalid-feedback');
-    if (!errorDiv) {
-        errorDiv = document.createElement('div');
-        errorDiv.className = 'invalid-feedback';
-        field.parentNode.appendChild(errorDiv);
-    }
-    errorDiv.textContent = message;
-}
-
-// Hide field error
-function hideFieldError(field) {
-    const errorDiv = field.parentNode.querySelector('.invalid-feedback');
-    if (errorDiv) {
-        errorDiv.remove();
-    }
-}
-
-// Smooth scrolling for anchor links
-function initializeSmoothScrolling() {
-    const links = document.querySelectorAll('a[href^="#"]');
-    
-    links.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const targetId = this.getAttribute('href');
-            const targetElement = document.querySelector(targetId);
+// Configurar manipuladores de formulários globais
+function setupFormHandlers() {
+    // Interceptar todos os formulários para gerenciar loading state
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (form.tagName === 'FORM') {
+            const submitButton = form.querySelector('button[type="submit"]');
             
-            if (targetElement) {
-                e.preventDefault();
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
+            if (submitButton && !form.hasAttribute('data-no-loading')) {
+                // Não aplicar loading para formulário de chat (será gerenciado separadamente)
+                if (form.id !== 'message-form') {
+                    setButtonLoading(submitButton, true);
+                    
+                    // Reset após um tempo ou quando a página mudar
+                    setTimeout(() => {
+                        setButtonLoading(submitButton, false);
+                    }, 3000);
+                }
+            }
+        }
+    });
+}
+
+// Inicializar funcionalidades específicas do chat
+function initializeChat() {
+    if (!window.chatData) {
+        console.error('Dados do chat não encontrados');
+        return;
+    }
+    
+    // PROTEÇÃO: Verificar se o chat já foi inicializado
+    if (window.chatInitialized) {
+        console.log('Chat já foi inicializado, pulando...');
+        return;
+    }
+    window.chatInitialized = true;
+    
+    console.log('Inicializando chat...', window.chatData);
+    
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const submitButton = messageForm.querySelector('button[type="submit"]');
+    const typingIndicator = document.getElementById('typing-indicator');
+    
+    let typingTimer;
+    let chatSocket = socket;
+    let lastSentMessage = null;
+    
+    // Configurar Socket.IO para chat se disponível
+    if (chatSocket) {
+        // Join conversation room
+        chatSocket.emit('join-conversation', window.chatData.conversationId);
+        
+        // Listen for new messages from other users
+        chatSocket.on('new-message', function(data) {
+            console.log('Mensagem recebida via socket:', data);
+            
+            // FILTROS MELHORADOS para evitar duplicação
+            const isFromOtherUser = parseInt(data.senderId) !== parseInt(window.chatData.currentUserId);
+            const isDifferentFromLastSent = !lastSentMessage || 
+                (data.message !== lastSentMessage.message || 
+                 Math.abs(new Date(data.created_at) - lastSentMessage.timestamp) > 2000);
+            
+            if (isFromOtherUser && isDifferentFromLastSent) {
+                console.log('Adicionando mensagem de outro usuário');
+                addMessageToChat({
+                    sender_id: data.senderId,
+                    message: data.message,
+                    created_at: data.created_at || new Date().toISOString(),
+                    first_name: data.senderName ? data.senderName.split(' ')[0] : '',
+                    last_name: data.senderName ? data.senderName.split(' ').slice(1).join(' ') : ''
                 });
+                scrollToBottom();
+            } else {
+                console.log('Mensagem filtrada (própria ou duplicada)');
             }
         });
-    });
-}
-
-// Auto-hide alerts after 5 seconds
-function initializeAutoHideAlerts() {
-    const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
-    
-    alerts.forEach(alert => {
-        setTimeout(() => {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        }, 5000);
-    });
-}
-
-// Loading states for forms and buttons
-function initializeLoadingStates() {
-    const forms = document.querySelectorAll('form');
-    
-    forms.forEach(form => {
-        form.addEventListener('submit', function() {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                showLoadingState(submitBtn);
+        
+        // Typing indicators
+        messageInput.addEventListener('input', function() {
+            chatSocket.emit('typing', {
+                conversationId: window.chatData.conversationId,
+                userId: window.chatData.currentUserId,
+                isTyping: true
+            });
+            
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                chatSocket.emit('typing', {
+                    conversationId: window.chatData.conversationId,
+                    userId: window.chatData.currentUserId,
+                    isTyping: false
+                });
+            }, 1000);
+        });
+        
+        chatSocket.on('user-typing', function(data) {
+            if (parseInt(data.userId) !== parseInt(window.chatData.currentUserId)) {
+                if (data.isTyping) {
+                    document.getElementById('typing-user').textContent = window.chatData.otherUserName;
+                    typingIndicator.style.display = 'block';
+                } else {
+                    typingIndicator.style.display = 'none';
+                }
             }
         });
+    }
+    
+    // Manipular envio de mensagens
+    messageForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const message = messageInput.value.trim();
+        if (!message) return;
+        
+        // PROTEÇÃO: Verificar se já está enviando
+        if (submitButton.disabled) {
+            console.log('Envio já em andamento, ignorando...');
+            return;
+        }
+        
+        // Gerenciar estado do botão
+        setButtonLoading(submitButton, true);
+        
+        // Salvar referência da mensagem enviada
+        lastSentMessage = {
+            message: message,
+            timestamp: new Date()
+        };
+        
+        console.log('Enviando mensagem para o servidor:', {
+            conversationId: window.chatData.conversationId,
+            message: message
+        });
+        
+        // Enviar mensagem via AJAX
+        fetch('/chat/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                conversationId: window.chatData.conversationId,
+                message: message
+            })
+        })
+        .then(response => {
+            console.log('Resposta do servidor:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                console.log('Mensagem salva no banco com sucesso, ID:', data.message.id);
+                
+                // Adicionar mensagem à UI (APENAS UMA VEZ)
+                addMessageToChat({
+                    sender_id: window.chatData.currentUserId,
+                    message: message,
+                    created_at: new Date().toISOString(),
+                    first_name: window.chatData.currentUserFirstName,
+                    last_name: window.chatData.currentUserLastName
+                });
+                
+                messageInput.value = '';
+                scrollToBottom();
+            } else {
+                console.error('Erro do servidor:', data.error);
+                alert('Erro ao enviar mensagem: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erro de rede:', error);
+            alert('Erro ao enviar mensagem');
+        })
+        .finally(() => {
+            console.log('Finalizando envio, restaurando botão');
+            setButtonLoading(submitButton, false);
+        });
     });
-}
-
-// Show loading state on button
-function showLoadingState(button) {
-    const originalText = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = `
-        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-        Loading...
-    `;
     
-    // Store original text for restoration
-    button.dataset.originalText = originalText;
-}
-
-// Hide loading state on button
-function hideLoadingState(button) {
-    button.disabled = false;
-    button.innerHTML = button.dataset.originalText || button.innerHTML;
-}
-
-// Utility function to show toast notifications
-function showToast(message, type = 'info') {
-    const toastContainer = getOrCreateToastContainer();
+    // Enter para enviar
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            messageForm.dispatchEvent(new Event('submit'));
+        }
+    });
     
-    const toastId = 'toast-' + Date.now();
-    const toastHtml = `
-        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
+    // Scroll to bottom on load
+    scrollToBottom();
+}
+
+// Função para gerenciar estado de loading dos botões
+function setButtonLoading(button, isLoading) {
+    if (!button) return;
+    
+    if (isLoading) {
+        // Salvar conteúdo original se não foi salvo ainda
+        if (!button.hasAttribute('data-original-content')) {
+            button.setAttribute('data-original-content', button.innerHTML);
+        }
+        
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
+    } else {
+        button.disabled = false;
+        const originalContent = button.getAttribute('data-original-content');
+        if (originalContent) {
+            button.innerHTML = originalContent;
+        }
+    }
+}
+
+// Funções específicas do chat
+function addMessageToChat(message) {
+    const isOwnMessage = parseInt(message.sender_id) === parseInt(window.chatData.currentUserId);
+    
+    const messageTime = new Date(message.created_at).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    const messageHtml = `
+        <div class="message-item ${isOwnMessage ? 'own-message' : 'other-message'}">
+            <div class="message-content">
+                <div class="message-bubble p-3 rounded-3 ${isOwnMessage ? 'bg-primary text-white' : 'bg-light'}">
+                    <p class="mb-1">${escapeHtml(message.message)}</p>
+                    <small class="${isOwnMessage ? 'text-white-50' : 'text-muted'}">
+                        ${messageTime}
+                    </small>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <div class="message-label">
+                    <small class="text-muted">
+                        ${isOwnMessage ? 'Você' : `${message.first_name || window.chatData.otherUserFirstName} ${message.last_name || window.chatData.otherUserLastName}`}
+                    </small>
+                </div>
             </div>
         </div>
     `;
     
-    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-    
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
-    
-    // Remove toast element after it's hidden
-    toastElement.addEventListener('hidden.bs.toast', function() {
-        toastElement.remove();
-    });
-}
-
-// Get or create toast container
-function getOrCreateToastContainer() {
-    let container = document.querySelector('.toast-container');
-    
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        container.style.zIndex = '1055';
-        document.body.appendChild(container);
+    const messagesContainer = document.getElementById('messages-container');
+    if (messagesContainer) {
+        messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
     }
-    
-    return container;
 }
 
-// Utility function for AJAX requests
-function makeRequest(url, options = {}) {
-    const defaultOptions = {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
     };
-    
-    const finalOptions = { ...defaultOptions, ...options };
-    
-    return fetch(url, finalOptions)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .catch(error => {
-            console.error('Request failed:', error);
-            showToast('An error occurred. Please try again.', 'danger');
-            throw error;
-        });
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
-
-// Debounce function for search inputs
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Format date for display
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-// Format time for display
-function formatTime(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// Copy text to clipboard
-function copyToClipboard(text) {
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Copied to clipboard!', 'success');
-        }).catch(() => {
-            fallbackCopyToClipboard(text);
-        });
-    } else {
-        fallbackCopyToClipboard(text);
-    }
-}
-
-// Fallback copy to clipboard for older browsers
-function fallbackCopyToClipboard(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-        document.execCommand('copy');
-        showToast('Copied to clipboard!', 'success');
-    } catch (err) {
-        showToast('Failed to copy to clipboard', 'danger');
-    }
-    
-    document.body.removeChild(textArea);
-}
-
-// Lazy loading for images
-function initializeLazyLoading() {
-    const images = document.querySelectorAll('img[data-src]');
-    
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.classList.remove('lazy');
-                imageObserver.unobserve(img);
-            }
-        });
-    });
-    
-    images.forEach(img => imageObserver.observe(img));
-}
-
-// Initialize lazy loading when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeLazyLoading);
-} else {
-    initializeLazyLoading();
-}
-
-// Handle network status
-function handleNetworkStatus() {
-    window.addEventListener('online', () => {
-        showToast('Connection restored', 'success');
-    });
-    
-    window.addEventListener('offline', () => {
-        showToast('Connection lost. Some features may not work.', 'warning');
-    });
-}
-
-// Initialize network status handling
-handleNetworkStatus();
-
-// Export functions for use in other scripts
-window.PivotApp = {
-    showToast,
-    makeRequest,
-    debounce,
-    formatDate,
-    formatTime,
-    copyToClipboard,
-    showLoadingState,
-    hideLoadingState
-};

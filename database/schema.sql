@@ -115,6 +115,9 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Adicionar coluna is_read à tabela messages
+ALTER TABLE messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
+
 -- Swipe history table
 CREATE TABLE IF NOT EXISTS swipe_history (
     id INT AUTO_INCREMENT PRIMARY KEY,

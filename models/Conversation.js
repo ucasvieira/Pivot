@@ -2,18 +2,22 @@ const db = require('../config/database');
 
 class Conversation {
   static async create(matchId) {
-    const query = `
-      INSERT INTO conversations (match_id)
-      VALUES (?)
-    `;
-    const result = await db.query(query, [matchId]);
-    return { id: result.insertId, match_id: matchId };
-  }
+    // Verificar se já existe uma conversa para este match
+    const existingQuery = 'SELECT * FROM conversations WHERE match_id = ?';
+    const existing = await db.query(existingQuery, [matchId]);
+    
+    if (existing.rows.length > 0) {
+      return existing.rows[0];
+    }
 
-  static async findByMatchId(matchId) {
-    const query = 'SELECT * FROM conversations WHERE match_id = ?';
+    const query = 'INSERT INTO conversations (match_id) VALUES (?)';
     const result = await db.query(query, [matchId]);
-    return result.rows[0];
+    
+    return { 
+      id: result.insertId, 
+      match_id: matchId, 
+      created_at: new Date() 
+    };
   }
 
   static async findById(id) {
@@ -22,12 +26,10 @@ class Conversation {
     return result.rows[0];
   }
 
-  static async getOrCreate(matchId) {
-    let conversation = await this.findByMatchId(matchId);
-    if (!conversation) {
-      conversation = await this.create(matchId);
-    }
-    return conversation;
+  static async findByMatchId(matchId) {
+    const query = 'SELECT * FROM conversations WHERE match_id = ?';
+    const result = await db.query(query, [matchId]);
+    return result.rows[0];
   }
 
   static async getUserConversations(userId) {
@@ -37,7 +39,7 @@ class Conversation {
              up1.last_name as collaborator_last_name, up1.profile_picture as collaborator_picture,
              u2.id as idealizer_id, up2.first_name as idealizer_first_name,
              up2.last_name as idealizer_last_name, up2.profile_picture as idealizer_picture,
-             (SELECT msg.message FROM messages msg WHERE msg.conversation_id = c.id ORDER BY msg.created_at DESC LIMIT 1) as last_message,
+             (SELECT msg.message FROM messages msg WHERE msg.conversation_id = c.id ORDER BY msg.created_at DESC LIMIT 1) as last_message,  
              (SELECT msg.created_at FROM messages msg WHERE msg.conversation_id = c.id ORDER BY msg.created_at DESC LIMIT 1) as last_message_time
       FROM conversations c
       JOIN matches m ON c.match_id = m.id

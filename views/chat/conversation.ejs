@@ -1,6 +1,3 @@
-
-
-
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
@@ -11,23 +8,25 @@
                         <a href="/chat" class="btn btn-outline-secondary btn-sm me-3">
                             <i class="bi bi-arrow-left"></i>
                         </a>
-                        <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
-                             style="width: 40px; height: 40px;">
-                            <% 
-                            const otherUserPicture = match.collaborator_id === user.id ? match.idealizer_picture : match.collaborator_picture;
-                            const otherUserFirstName = match.collaborator_id === user.id ? match.idealizer_first_name : match.collaborator_first_name;
-                            const otherUserLastName = match.collaborator_id === user.id ? match.idealizer_last_name : match.collaborator_last_name;
-                            %>
-                            <% if (otherUserPicture) { %>
-                                <img src="<%= otherUserPicture %>" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">
-                            <% } else { %>
-                                <%= otherUserFirstName ? otherUserFirstName.charAt(0) : 'U' %>
-                            <% } %>
+                        <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                            style="width: 40px; height: 40px;">
+                            <% const otherUserPicture=match.collaborator_id===user.id ? match.idealizer_picture :
+                                match.collaborator_picture; const otherUserFirstName=match.collaborator_id===user.id ?
+                                match.idealizer_first_name : match.collaborator_first_name; const
+                                otherUserLastName=match.collaborator_id===user.id ? match.idealizer_last_name :
+                                match.collaborator_last_name; %>
+                                <% if (otherUserPicture) { %>
+                                    <img src="<%= otherUserPicture %>" alt="Profile"
+                                        class="rounded-circle w-100 h-100 object-fit-cover">
+                                    <% } else { %>
+                                        <%= otherUserFirstName ? otherUserFirstName.charAt(0) : 'U' %>
+                                            <% } %>
                         </div>
                         <div class="flex-grow-1">
                             <h6 class="fw-bold mb-1">
                                 <a href="/profile/view/<%= otherUserId %>" class="text-decoration-none">
-                                    <%= otherUserFirstName %> <%= otherUserLastName %>
+                                    <%= otherUserFirstName %>
+                                        <%= otherUserLastName %>
                                 </a>
                             </h6>
                             <p class="text-muted small mb-0">
@@ -55,22 +54,23 @@
                     <div id="messages-container" class="p-4" style="height: 500px; overflow-y: auto;">
                         <% if (messages && messages.length > 0) { %>
                             <% messages.forEach(function(message) { %>
-                                <div class="message-item mb-3 <%= message.sender_id == user.id ? 'text-end' : '' %>">
-                                    <div class="d-inline-block">
-                                        <div class="message-bubble p-3 rounded-3 <%= message.sender_id == user.id ? 'bg-primary text-white' : 'bg-light' %>" 
-                                             style="max-width: 70%;">
+                                <div class="message-item <%= message.sender_id == user.id ? 'own-message' : 'other-message' %>">
+                                    <div class="message-content">
+                                        <div class="message-bubble p-3 rounded-3 <%= message.sender_id == user.id ? 'bg-primary text-white' : 'bg-light' %>">
                                             <p class="mb-1"><%= message.message %></p>
                                             <small class="<%= message.sender_id == user.id ? 'text-white-50' : 'text-muted' %>">
                                                 <%= new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %>
                                             </small>
                                         </div>
-                                        <% if (message.sender_id != user.id) { %>
-                                            <div class="mt-1">
-                                                <small class="text-muted">
+                                        <div class="message-label">
+                                            <small class="text-muted">
+                                                <% if (message.sender_id != user.id) { %>
                                                     <%= message.first_name %> <%= message.last_name %>
-                                                </small>
-                                            </div>
-                                        <% } %>
+                                                <% } else { %>
+                                                    Você
+                                                <% } %>
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             <% }); %>
@@ -82,7 +82,7 @@
                             </div>
                         <% } %>
                     </div>
-                    
+
                     <!-- Typing Indicator -->
                     <div id="typing-indicator" class="px-4 pb-2" style="display: none;">
                         <div class="d-flex align-items-center text-muted">
@@ -94,12 +94,12 @@
                             <small><span id="typing-user"></span> is typing...</small>
                         </div>
                     </div>
-                    
+
                     <!-- Message Input -->
                     <div class="border-top p-3">
                         <form id="message-form" class="d-flex gap-2">
-                            <input type="text" id="message-input" class="form-control" 
-                                   placeholder="Type your message..." required>
+                            <input type="text" id="message-input" class="form-control"
+                                placeholder="Type your message..." required>
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-send"></i>
                             </button>
@@ -112,143 +112,98 @@
 </div>
 
 <style>
-.object-fit-cover {
-    object-fit: cover;
-}
+    .object-fit-cover {
+        object-fit: cover;
+    }
 
-.message-bubble {
-    word-wrap: break-word;
-    display: inline-block;
-}
+    #messages-container {
+        scroll-behavior: smooth;
+        background-color: #f8f9fa;
+    }
 
-#messages-container {
-    scroll-behavior: smooth;
-}
+    /* CORRIGIDO: Estrutura simplificada para mensagens */
+    .message-item {
+        display: flex;
+        margin-bottom: 1rem;
+        width: 100%;
+    }
 
-.typing-dots {
-    display: inline-flex;
-    gap: 2px;
-}
+    .message-item.own-message {
+        justify-content: flex-end;
+    }
 
-.typing-dots span {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: #6c757d;
-    animation: typing 1.4s infinite ease-in-out;
-}
+    .message-item.other-message {
+        justify-content: flex-start;
+    }
 
-.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+    .message-content {
+        max-width: 70%;
+        min-width: 100px;
+    }
 
-@keyframes typing {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
-}
-</style>
+    .message-bubble {
+        word-wrap: break-word;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 18px !important;
+    }
 
-<script>
-// Socket.io connection
-const socket = io();
-const conversationId = <%= conversation.id %>;
-const currentUserId = <%= user.id %>;
-const otherUserName = '<%= otherUserFirstName %> <%= otherUserLastName %>';
+    /* Labels alinhados corretamente */
+    .message-item.own-message .message-label {
+        text-align: right;
+    }
 
-// Join conversation room
-socket.emit('join-conversation', conversationId);
+    .message-item.other-message .message-label {
+        text-align: left;
+    }
 
-// Message form handling
-const messageForm = document.getElementById('message-form');
-const messageInput = document.getElementById('message-input');
-const messagesContainer = document.getElementById('messages-container');
-const typingIndicator = document.getElementById('typing-indicator');
+    .message-label {
+        margin-top: 4px;
+    }
 
-messageForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const message = messageInput.value.trim();
-    if (!message) return;
-    
-    // Send message via socket
-    socket.emit('send-message', {
-        conversationId: conversationId,
-        senderId: currentUserId,
-        message: message
-    });
-    
-    messageInput.value = '';
-});
+    .typing-dots {
+        display: inline-flex;
+        gap: 2px;
+    }
 
-// Listen for new messages
-socket.on('new-message', function(data) {
-    addMessageToChat(data);
-    scrollToBottom();
-});
+    .typing-dots span {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background-color: #6c757d;
+        animation: typing 1.4s infinite ease-in-out;
+    }
 
-// Typing indicators
-let typingTimer;
-messageInput.addEventListener('input', function() {
-    socket.emit('typing', {
-        conversationId: conversationId,
-        userId: currentUserId,
-        isTyping: true
-    });
-    
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => {
-        socket.emit('typing', {
-            conversationId: conversationId,
-            userId: currentUserId,
-            isTyping: false
-        });
-    }, 1000);
-});
+    .typing-dots span:nth-child(1) {
+        animation-delay: -0.32s;
+    }
 
-socket.on('user-typing', function(data) {
-    if (data.userId !== currentUserId) {
-        if (data.isTyping) {
-            document.getElementById('typing-user').textContent = otherUserName;
-            typingIndicator.style.display = 'block';
-        } else {
-            typingIndicator.style.display = 'none';
+    .typing-dots span:nth-child(2) {
+        animation-delay: -0.16s;
+    }
+
+    @keyframes typing {
+        0%, 80%, 100% {
+            transform: scale(0);
+        }
+        40% {
+            transform: scale(1);
         }
     }
-});
+</style>
 
-function addMessageToChat(message) {
-    const isOwnMessage = message.sender_id == currentUserId;
-    const messageHtml = `
-        <div class="message-item mb-3 ${isOwnMessage ? 'text-end' : ''}">
-            <div class="d-inline-block">
-                <div class="message-bubble p-3 rounded-3 ${isOwnMessage ? 'bg-primary text-white' : 'bg-light'}" 
-                     style="max-width: 70%;">
-                    <p class="mb-1">${escapeHtml(message.message)}</p>
-                    <small class="${isOwnMessage ? 'text-white-50' : 'text-muted'}">
-                        ${new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </small>
-                </div>
-                ${!isOwnMessage ? `
-                    <div class="mt-1">
-                        <small class="text-muted">${otherUserName}</small>
-                    </div>
-                ` : ''}
-            </div>
-        </div>
-    `;
+
+<script>
+    // Apenas definir dados essenciais para o main.js
+    window.chatData = {
+        conversationId: <%= conversation.id %>,
+        currentUserId: <%= user.id %>,
+        otherUserName: '<%= otherUserFirstName %> <%= otherUserLastName %>',
+        otherUserFirstName: '<%= otherUserFirstName %>',
+        otherUserLastName: '<%= otherUserLastName %>',
+        currentUserFirstName: '<%= user.first_name || "" %>',
+        currentUserLastName: '<%= user.last_name || "" %>'
+    };
     
-    messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
-}
-
-function scrollToBottom() {
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Scroll to bottom on load
-window.addEventListener('load', scrollToBottom);
+    // Sinalizar para o main.js que é uma página de chat
+    document.body.setAttribute('data-page', 'chat-conversation');
 </script>

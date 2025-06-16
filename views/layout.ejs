@@ -110,19 +110,34 @@
         </div>
     </nav>
 
-    <!-- Flash Messages -->
-    <% if (messages && messages.length > 0) { %>
-        <div class="container mt-3">
-            <% messages.forEach(function(message) { %>
-                <% Object.keys(message).forEach(function(type) { %>
-                    <div class="alert alert-<%= type === 'error' ? 'danger' : type %> alert-dismissible fade show">
-                        <%= message[type] %>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <% }); %>
-            <% }); %>
+    <!-- Flash Messages - VERSÃO CORRIGIDA -->
+<% if (typeof flash !== 'undefined' && flash) { %>
+    <div class="container mt-3">
+      <% if (flash.success) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="bi bi-check-circle me-2"></i>
+          <%= flash.success %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    <% } %>
+      <% } %>
+      
+      <% if (flash.error) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <%= flash.error %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+      
+      <% if (flash.info) { %>
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+          <i class="bi bi-info-circle me-2"></i>
+          <%= flash.info %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
 
     <!-- Main Content -->
     <main>
