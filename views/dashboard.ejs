@@ -1,0 +1,263 @@
+
+
+
+<div class="container py-4">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="h2 fw-bold mb-2">
+                                Welcome back, <%= user.first_name || user.email %>!
+                            </h1>
+                            <p class="mb-0 opacity-75">
+                                <% if (user.user_type === 'idealizer') { %>
+                                    Ready to find collaborators for your next big idea?
+                                <% } else { %>
+                                    Ready to discover exciting projects to work on?
+                                <% } %>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <div class="d-flex gap-2 justify-content-md-end">
+                                <% if (user.user_type === 'idealizer') { %>
+                                    <a href="/projects/create" class="btn btn-warning">
+                                        <i class="bi bi-plus-circle"></i> New Project
+                                    </a>
+                                <% } %>
+                                <a href="/match/swipe" class="btn btn-light">
+                                    <i class="bi bi-heart"></i> Discover
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <% if (user.user_type === 'idealizer') { %>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="text-primary mb-2">
+                            <i class="bi bi-folder display-4"></i>
+                        </div>
+                        <h3 class="fw-bold mb-1"><%= totalProjects || 0 %></h3>
+                        <p class="text-muted mb-0">Active Projects</p>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="text-success mb-2">
+                        <i class="bi bi-people display-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1"><%= totalMatches || 0 %></h3>
+                    <p class="text-muted mb-0">Total Matches</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="text-warning mb-2">
+                        <i class="bi bi-chat-dots display-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1"><%= acceptedMatches || 0 %></h3>
+                    <p class="text-muted mb-0">Active Chats</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <% if (user.user_type === 'idealizer') { %>
+                <!-- My Projects -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="h5 fw-bold mb-0">
+                                <i class="bi bi-folder text-primary me-2"></i>My Projects
+                            </h3>
+                            <a href="/projects/my" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <% if (projects && projects.length > 0) { %>
+                            <% projects.slice(0, 3).forEach(function(project) { %>
+                                <div class="d-flex align-items-center p-3 border rounded mb-3">
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">
+                                            <a href="/projects/view/<%= project.id %>" class="text-decoration-none">
+                                                <%= project.title %>
+                                            </a>
+                                        </h6>
+                                        <p class="text-muted small mb-1">
+                                            <%= project.description.substring(0, 100) %>...
+                                        </p>
+                                        <small class="text-muted">
+                                            <i class="bi bi-people me-1"></i><%= project.match_count || 0 %> matches
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-<%= project.status === 'active' ? 'success' : 'secondary' %>">
+                                            <%= project.status %>
+                                        </span>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        <% } else { %>
+                            <div class="text-center py-4">
+                                <i class="bi bi-folder-plus display-4 text-muted mb-3"></i>
+                                <h5 class="text-muted">No projects yet</h5>
+                                <p class="text-muted">Create your first project to start finding collaborators</p>
+                                <a href="/projects/create" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle"></i> Create Project
+                                </a>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            <% } else { %>
+                <!-- Available Projects for Collaborators -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="h5 fw-bold mb-0">
+                                <i class="bi bi-search text-primary me-2"></i>Discover Projects
+                            </h3>
+                            <a href="/projects" class="btn btn-sm btn-outline-primary">Browse All</a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <% if (availableProjects && availableProjects.length > 0) { %>
+                            <% availableProjects.forEach(function(project) { %>
+                                <div class="d-flex align-items-center p-3 border rounded mb-3">
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">
+                                            <a href="/projects/view/<%= project.id %>" class="text-decoration-none">
+                                                <%= project.title %>
+                                            </a>
+                                        </h6>
+                                        <p class="text-muted small mb-1">
+                                            <%= project.description.substring(0, 100) %>...
+                                        </p>
+                                        <small class="text-muted">
+                                            by <%= project.first_name %> <%= project.last_name %>
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted d-block">
+                                            <i class="bi bi-geo-alt me-1"></i><%= project.idealizer_location || 'Remote' %>
+                                        </small>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        <% } else { %>
+                            <div class="text-center py-4">
+                                <i class="bi bi-search display-4 text-muted mb-3"></i>
+                                <h5 class="text-muted">No new projects</h5>
+                                <p class="text-muted">Check back later for new opportunities</p>
+                                <a href="/match/swipe" class="btn btn-primary">
+                                    <i class="bi bi-heart"></i> Start Swiping
+                                </a>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Recent Matches -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="h5 fw-bold mb-0">
+                            <i class="bi bi-people text-success me-2"></i>Recent Matches
+                        </h3>
+                        <a href="/match/matches" class="btn btn-sm btn-outline-success">View All</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <% if (matches && matches.length > 0) { %>
+                        <% matches.slice(0, 5).forEach(function(match) { %>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-person text-muted"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 small fw-bold">
+                                        <%= match.other_user_first_name %> <%= match.other_user_last_name %>
+                                    </h6>
+                                    <p class="text-muted small mb-0">
+                                        <%= match.project_title %>
+                                    </p>
+                                </div>
+                                <div>
+                                    <span class="badge bg-<%= match.status === 'accepted' ? 'success' : 'warning' %>">
+                                        <%= match.status %>
+                                    </span>
+                                </div>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="text-center py-3">
+                            <i class="bi bi-heart display-6 text-muted mb-2"></i>
+                            <p class="text-muted small mb-0">No matches yet</p>
+                            <a href="/match/swipe" class="btn btn-sm btn-outline-primary mt-2">
+                                Start Matching
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h3 class="h5 fw-bold mb-0">
+                        <i class="bi bi-lightning text-warning me-2"></i>Quick Actions
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <% if (user.user_type === 'idealizer') { %>
+                            <a href="/projects/create" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle me-2"></i>Create New Project
+                            </a>
+                            <a href="/projects/my" class="btn btn-outline-secondary">
+                                <i class="bi bi-folder me-2"></i>Manage Projects
+                            </a>
+                        <% } else { %>
+                            <a href="/projects" class="btn btn-outline-primary">
+                                <i class="bi bi-search me-2"></i>Browse Projects
+                            </a>
+                            <a href="/profile/edit" class="btn btn-outline-secondary">
+                                <i class="bi bi-person-gear me-2"></i>Update Skills
+                            </a>
+                        <% } %>
+                        <a href="/match/swipe" class="btn btn-outline-success">
+                            <i class="bi bi-heart me-2"></i>Discover Matches
+                        </a>
+                        <a href="/chat" class="btn btn-outline-info">
+                            <i class="bi bi-chat-dots me-2"></i>Messages
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

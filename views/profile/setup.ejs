@@ -1,0 +1,155 @@
+
+
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h3 fw-bold">Complete Your Profile</h1>
+                        <p class="text-muted">Help others discover what makes you unique</p>
+                    </div>
+
+                    <form action="/profile/setup" method="POST">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="<%= profile ? profile.first_name : '' %>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="<%= profile ? profile.last_name : '' %>" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">Bio *</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="4" required 
+                                      placeholder="Tell us about yourself, your interests, and what you're passionate about..."><%= profile ? profile.bio : '' %></textarea>
+                            <div class="form-text">Minimum 10 characters</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="location" class="form-label">Location *</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       value="<%= profile ? profile.location : '' %>" 
+                                       placeholder="City, Country" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="experience_level" class="form-label">Experience Level *</label>
+                                <select class="form-select" id="experience_level" name="experience_level" required>
+                                    <option value="">Select your level</option>
+                                    <option value="beginner" <%= profile && profile.experience_level === 'beginner' ? 'selected' : '' %>>
+                                        Beginner (0-2 years)
+                                    </option>
+                                    <option value="intermediate" <%= profile && profile.experience_level === 'intermediate' ? 'selected' : '' %>>
+                                        Intermediate (2-5 years)
+                                    </option>
+                                    <option value="advanced" <%= profile && profile.experience_level === 'advanced' ? 'selected' : '' %>>
+                                        Advanced (5+ years)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <% if (user.user_type === 'collaborator') { %>
+                            <div class="mb-3">
+                                <label for="availability" class="form-label">Availability</label>
+                                <select class="form-select" id="availability" name="availability">
+                                    <option value="">Select availability</option>
+                                    <option value="full-time" <%= profile && profile.availability === 'full-time' ? 'selected' : '' %>>
+                                        Full-time
+                                    </option>
+                                    <option value="part-time" <%= profile && profile.availability === 'part-time' ? 'selected' : '' %>>
+                                        Part-time
+                                    </option>
+                                    <option value="weekends" <%= profile && profile.availability === 'weekends' ? 'selected' : '' %>>
+                                        Weekends only
+                                    </option>
+                                    <option value="flexible" <%= profile && profile.availability === 'flexible' ? 'selected' : '' %>>
+                                        Flexible
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Skills & Technologies</label>
+                                <div class="row g-2" style="max-height: 300px; overflow-y: auto;">
+                                    <% 
+                                    const userSkillIds = userSkills ? userSkills.map(s => s.id) : [];
+                                    const groupedSkills = {};
+                                    skills.forEach(skill => {
+                                        if (!groupedSkills[skill.category]) {
+                                            groupedSkills[skill.category] = [];
+                                        }
+                                        groupedSkills[skill.category].push(skill);
+                                    });
+                                    %>
+                                    <% Object.keys(groupedSkills).forEach(category => { %>
+                                        <div class="col-12">
+                                            <h6 class="text-muted mb-2"><%= category %></h6>
+                                        </div>
+                                        <% groupedSkills[category].forEach(skill => { %>
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           id="skill_<%= skill.id %>" name="skills" value="<%= skill.id %>"
+                                                           <%= userSkillIds.includes(skill.id) ? 'checked' : '' %>>
+                                                    <label class="form-check-label" for="skill_<%= skill.id %>">
+                                                        <%= skill.name %>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        <% }); %>
+                                    <% }); %>
+                                </div>
+                            </div>
+                        <% } %>
+
+                        <!-- Contact Information -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title">Contact Information</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="phone" class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" id="phone" name="phone" 
+                                               value="<%= profile && profile.contact_info ? profile.contact_info.phone : '' %>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="linkedin" class="form-label">LinkedIn Profile</label>
+                                        <input type="url" class="form-control" id="linkedin" name="linkedin" 
+                                               value="<%= profile && profile.contact_info ? profile.contact_info.linkedin : '' %>"
+                                               placeholder="https://linkedin.com/in/yourprofile">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="github" class="form-label">GitHub Profile</label>
+                                        <input type="url" class="form-control" id="github" name="github" 
+                                               value="<%= profile && profile.contact_info ? profile.contact_info.github : '' %>"
+                                               placeholder="https://github.com/yourusername">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="portfolio" class="form-label">Portfolio Website</label>
+                                        <input type="url" class="form-control" id="portfolio" name="portfolio" 
+                                               value="<%= profile && profile.portfolio_links ? profile.portfolio_links.portfolio : '' %>"
+                                               placeholder="https://yourportfolio.com">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Complete Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

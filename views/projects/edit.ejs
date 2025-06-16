@@ -1,0 +1,109 @@
+
+
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h3 fw-bold">Edit Project</h1>
+                        <p class="text-muted">Update your project details</p>
+                    </div>
+
+                    <form action="/projects/edit/<%= project.id %>" method="POST">
+                        <div class="mb-4">
+                            <label for="title" class="form-label">Project Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required 
+                                   value="<%= project.title %>" placeholder="Give your project a compelling title">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Project Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="5" required 
+                                      placeholder="Describe your project idea, what problem it solves, and what makes it unique..."><%= project.description %></textarea>
+                            <div class="form-text">Minimum 20 characters</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="objectives" class="form-label">Project Objectives *</label>
+                            <textarea class="form-control" id="objectives" name="objectives" rows="4" required 
+                                      placeholder="What are the main goals and deliverables for this project?"><%= project.objectives %></textarea>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="timeline" class="form-label">Timeline *</label>
+                                <select class="form-select" id="timeline" name="timeline" required>
+                                    <option value="">Select timeline</option>
+                                    <option value="1-2 weeks" <%= project.timeline === '1-2 weeks' ? 'selected' : '' %>>1-2 weeks</option>
+                                    <option value="1 month" <%= project.timeline === '1 month' ? 'selected' : '' %>>1 month</option>
+                                    <option value="2-3 months" <%= project.timeline === '2-3 months' ? 'selected' : '' %>>2-3 months</option>
+                                    <option value="3-6 months" <%= project.timeline === '3-6 months' ? 'selected' : '' %>>3-6 months</option>
+                                    <option value="6+ months" <%= project.timeline === '6+ months' ? 'selected' : '' %>>6+ months</option>
+                                    <option value="Ongoing" <%= project.timeline === 'Ongoing' ? 'selected' : '' %>>Ongoing</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="location_preference" class="form-label">Location Preference *</label>
+                                <input type="text" class="form-control" id="location_preference" name="location_preference" required 
+                                       value="<%= project.location_preference %>" placeholder="Remote, Local, or specific location">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="status" class="form-label">Project Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="active" <%= project.status === 'active' ? 'selected' : '' %>>Active</option>
+                                    <option value="paused" <%= project.status === 'paused' ? 'selected' : '' %>>Paused</option>
+                                    <option value="completed" <%= project.status === 'completed' ? 'selected' : '' %>>Completed</option>
+                                    <option value="cancelled" <%= project.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Required Skills & Technologies</label>
+                            <div class="row g-2" style="max-height: 300px; overflow-y: auto;">
+                                <% 
+                                const projectSkillIds = projectSkills ? projectSkills.map(s => s.id) : [];
+                                const groupedSkills = {};
+                                skills.forEach(skill => {
+                                    if (!groupedSkills[skill.category]) {
+                                        groupedSkills[skill.category] = [];
+                                    }
+                                    groupedSkills[skill.category].push(skill);
+                                });
+                                %>
+                                <% Object.keys(groupedSkills).forEach(category => { %>
+                                    <div class="col-12">
+                                        <h6 class="text-muted mb-2 mt-3"><%= category %></h6>
+                                    </div>
+                                    <% groupedSkills[category].forEach(skill => { %>
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="skill_<%= skill.id %>" name="required_skills" value="<%= skill.id %>"
+                                                       <%= projectSkillIds.includes(skill.id) ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="skill_<%= skill.id %>">
+                                                    <%= skill.name %>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                <% }); %>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-primary flex-fill">
+                                <i class="bi bi-check-circle"></i> Update Project
+                            </button>
+                            <a href="/projects/view/<%= project.id %>" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

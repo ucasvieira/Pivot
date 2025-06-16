@@ -1,0 +1,137 @@
+
+
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 fw-bold mb-1">My Matches</h1>
+                    <p class="text-muted mb-0">Connect with your matches and start collaborating</p>
+                </div>
+                <a href="/match/swipe" class="btn btn-primary">
+                    <i class="bi bi-heart"></i> Discover More
+                </a>
+            </div>
+
+            <% if (matches && matches.length > 0) { %>
+                <div class="row g-4">
+                    <% matches.forEach(function(match) { %>
+                        <div class="col-lg-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-start mb-3">
+                                        <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                             style="width: 50px; height: 50px;">
+                                            <% if (match.other_user_picture) { %>
+                                                <img src="<%= match.other_user_picture %>" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">
+                                            <% } else { %>
+                                                <%= match.other_user_first_name ? match.other_user_first_name.charAt(0) : 'U' %>
+                                            <% } %>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h5 class="fw-bold mb-1">
+                                                <a href="/profile/view/<%= userType === 'collaborator' ? match.idealizer_id : match.collaborator_id %>" 
+                                                   class="text-decoration-none">
+                                                    <%= match.other_user_first_name %> <%= match.other_user_last_name %>
+                                                </a>
+                                            </h5>
+                                            <h6 class="text-primary mb-2">
+                                                <a href="/projects/view/<%= match.project_id %>" class="text-decoration-none">
+                                                    <%= match.project_title %>
+                                                </a>
+                                            </h6>
+                                            <p class="text-muted small mb-2">
+                                                <%= match.project_description.length > 100 ? match.project_description.substring(0, 100) + '...' : match.project_description %>
+                                            </p>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge bg-<%= match.status === 'accepted' ? 'success' : match.status === 'pending' ? 'warning' : 'secondary' %>">
+                                                <%= match.status.charAt(0).toUpperCase() + match.status.slice(1) %>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar me-1"></i>
+                                            Matched <%= new Date(match.created_at).toLocaleDateString() %>
+                                        </small>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <% if (match.status === 'pending') { %>
+                                                <% if ((userType === 'collaborator' && !match.collaborator_interested) || (userType === 'idealizer' && !match.idealizer_interested)) { %>
+                                                    <button class="btn btn-sm btn-success" onclick="respondToMatch(<%= match.id %>, 'accept')">
+                                                        <i class="bi bi-check"></i> Accept
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="respondToMatch(<%= match.id %>, 'reject')">
+                                                        <i class="bi bi-x"></i> Reject
+                                                    </button>
+                                                <% } else { %>
+                                                    <span class="text-muted small">Waiting for response...</span>
+                                                <% } %>
+                                            <% } else if (match.status === 'accepted') { %>
+                                                <a href="/chat/conversation/<%= match.id %>" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-chat-dots"></i> Chat
+                                                </a>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="text-center py-5">
+                    <i class="bi bi-people display-1 text-muted mb-3"></i>
+                    <h3 class="text-muted">No matches yet</h3>
+                    <p class="text-muted">Start swiping to find your perfect collaborators or projects</p>
+                    <a href="/match/swipe" class="btn btn-primary btn-lg">
+                        <i class="bi bi-heart"></i> Start Matching
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<style>
+.object-fit-cover {
+    object-fit: cover;
+}
+
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+</style>
+
+<script>
+function respondToMatch(matchId, action) {
+    fetch(`/match/respond/${matchId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: action })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the page to show updated status
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+</script>

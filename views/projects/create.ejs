@@ -1,0 +1,107 @@
+
+
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h3 fw-bold">Create New Project</h1>
+                        <p class="text-muted">Share your idea and find the perfect collaborators</p>
+                    </div>
+
+                    <form action="/projects/create" method="POST">
+                        <div class="mb-4">
+                            <label for="title" class="form-label">Project Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required 
+                                   placeholder="Give your project a compelling title">
+                            <div class="form-text">Choose a clear, descriptive title that captures your project's essence</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Project Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="5" required 
+                                      placeholder="Describe your project idea, what problem it solves, and what makes it unique..."></textarea>
+                            <div class="form-text">Minimum 20 characters. Be detailed to attract the right collaborators</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="objectives" class="form-label">Project Objectives *</label>
+                            <textarea class="form-control" id="objectives" name="objectives" rows="4" required 
+                                      placeholder="What are the main goals and deliverables for this project?"></textarea>
+                            <div class="form-text">List the key objectives and expected outcomes</div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="timeline" class="form-label">Timeline *</label>
+                                <select class="form-select" id="timeline" name="timeline" required>
+                                    <option value="">Select timeline</option>
+                                    <option value="1-2 weeks">1-2 weeks</option>
+                                    <option value="1 month">1 month</option>
+                                    <option value="2-3 months">2-3 months</option>
+                                    <option value="3-6 months">3-6 months</option>
+                                    <option value="6+ months">6+ months</option>
+                                    <option value="Ongoing">Ongoing</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="location_preference" class="form-label">Location Preference *</label>
+                                <input type="text" class="form-control" id="location_preference" name="location_preference" required 
+                                       placeholder="Remote, Local, or specific location">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Required Skills & Technologies</label>
+                            <p class="text-muted small mb-3">Select the skills you're looking for in collaborators</p>
+                            <div class="row g-2" style="max-height: 300px; overflow-y: auto;">
+                                <% 
+                                const groupedSkills = {};
+                                skills.forEach(skill => {
+                                    if (!groupedSkills[skill.category]) {
+                                        groupedSkills[skill.category] = [];
+                                    }
+                                    groupedSkills[skill.category].push(skill);
+                                });
+                                %>
+                                <% Object.keys(groupedSkills).forEach(category => { %>
+                                    <div class="col-12">
+                                        <h6 class="text-muted mb-2 mt-3"><%= category %></h6>
+                                    </div>
+                                    <% groupedSkills[category].forEach(skill => { %>
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="skill_<%= skill.id %>" name="required_skills" value="<%= skill.id %>">
+                                                <label class="form-check-label" for="skill_<%= skill.id %>">
+                                                    <%= skill.name %>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                <% }); %>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Tip:</strong> The more detailed your project description, the better matches you'll receive. 
+                            Include information about the tech stack, team size, and collaboration style you prefer.
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-primary flex-fill">
+                                <i class="bi bi-rocket-takeoff"></i> Create Project
+                            </button>
+                            <a href="/projects/my" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

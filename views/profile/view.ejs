@@ -1,0 +1,180 @@
+
+
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Profile Header -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center mb-3 mb-md-0">
+                            <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                                 style="width: 100px; height: 100px; font-size: 2rem;">
+                                <% if (profileUser.profile_picture) { %>
+                                    <img src="<%= profileUser.profile_picture %>" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">
+                                <% } else { %>
+                                    <%= profileUser.first_name ? profileUser.first_name.charAt(0) : profileUser.email.charAt(0) %>
+                                <% } %>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h1 class="h3 fw-bold mb-1">
+                                        <%= profileUser.first_name %> <%= profileUser.last_name %>
+                                    </h1>
+                                    <div class="d-flex align-items-center gap-3 text-muted">
+                                        <span>
+                                            <i class="bi bi-person-badge"></i>
+                                            <%= profileUser.user_type.charAt(0).toUpperCase() + profileUser.user_type.slice(1) %>
+                                        </span>
+                                        <span>
+                                            <i class="bi bi-geo-alt"></i>
+                                            <%= profileUser.location || 'Location not specified' %>
+                                        </span>
+                                        <span>
+                                            <i class="bi bi-award"></i>
+                                            <%= profileUser.experience_level ? profileUser.experience_level.charAt(0).toUpperCase() + profileUser.experience_level.slice(1) : 'Not specified' %>
+                                        </span>
+                                    </div>
+                                </div>
+                                <% if (isOwnProfile) { %>
+                                    <a href="/profile/edit" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> Edit Profile
+                                    </a>
+                                <% } %>
+                            </div>
+                            
+                            <% if (profileUser.availability && profileUser.user_type === 'collaborator') { %>
+                                <div class="mb-2">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-clock"></i> <%= profileUser.availability.charAt(0).toUpperCase() + profileUser.availability.slice(1) %>
+                                    </span>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bio Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h3 class="h5 fw-bold mb-3">
+                        <i class="bi bi-person text-primary me-2"></i>About
+                    </h3>
+                    <p class="mb-0"><%= profileUser.bio || 'No bio available' %></p>
+                </div>
+            </div>
+
+            <!-- Skills Section (for collaborators) -->
+            <% if (profileUser.user_type === 'collaborator' && userSkills && userSkills.length > 0) { %>
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h3 class="h5 fw-bold mb-3">
+                            <i class="bi bi-tools text-success me-2"></i>Skills & Technologies
+                        </h3>
+                        <% 
+                        const skillsByCategory = {};
+                        userSkills.forEach(skill => {
+                            if (!skillsByCategory[skill.category]) {
+                                skillsByCategory[skill.category] = [];
+                            }
+                            skillsByCategory[skill.category].push(skill);
+                        });
+                        %>
+                        <% Object.keys(skillsByCategory).forEach(category => { %>
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2"><%= category %></h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <% skillsByCategory[category].forEach(skill => { %>
+                                        <span class="badge bg-light text-dark border">
+                                            <%= skill.name %>
+                                            <small class="text-muted">(<%= skill.proficiency_level %>)</small>
+                                        </span>
+                                    <% }); %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Contact Information -->
+            <% if (profileUser.contact_info || profileUser.portfolio_links) { %>
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h3 class="h5 fw-bold mb-3">
+                            <i class="bi bi-envelope text-info me-2"></i>Contact & Links
+                        </h3>
+                        <div class="row g-3">
+                            <% if (profileUser.contact_info) { %>
+                                <% if (profileUser.contact_info.phone) { %>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-telephone text-muted me-2"></i>
+                                            <span><%= profileUser.contact_info.phone %></span>
+                                        </div>
+                                    </div>
+                                <% } %>
+                                <% if (profileUser.contact_info.linkedin) { %>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-linkedin text-primary me-2"></i>
+                                            <a href="<%= profileUser.contact_info.linkedin %>" target="_blank" class="text-decoration-none">
+                                                LinkedIn Profile
+                                            </a>
+                                        </div>
+                                    </div>
+                                <% } %>
+                                <% if (profileUser.contact_info.github) { %>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-github text-dark me-2"></i>
+                                            <a href="<%= profileUser.contact_info.github %>" target="_blank" class="text-decoration-none">
+                                                GitHub Profile
+                                            </a>
+                                        </div>
+                                    </div>
+                                <% } %>
+                            <% } %>
+                            <% if (profileUser.portfolio_links && profileUser.portfolio_links.portfolio) { %>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-globe text-success me-2"></i>
+                                        <a href="<%= profileUser.portfolio_links.portfolio %>" target="_blank" class="text-decoration-none">
+                                            Portfolio Website
+                                        </a>
+                                    </div>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Member Since -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="h5 fw-bold mb-3">
+                        <i class="bi bi-calendar text-warning me-2"></i>Member Information
+                    </h3>
+                    <p class="text-muted mb-0">
+                        Member since <%= new Date(profileUser.created_at).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        }) %>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.object-fit-cover {
+    object-fit: cover;
+}
+</style>
