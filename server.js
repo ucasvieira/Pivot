@@ -14,32 +14,63 @@ require('./config/passport');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
-
-// Session store configuration for MySQL
-const sessionStore = new MySQLStore({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  clearExpired: true,
-  checkExpirationInterval: 90000, // 15 minutes
-  expiration: 8640000, // 24 hours
-  createDatabaseTable: true, // Automatically create sessions table
-  schema: {
-    tableName: 'sessions',
-    columnNames: {
-      session_id: 'session_id',
-      expires: 'expires',
-      data: 'data'
-    }
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.APP_URL || "*",
+    methods: ["GET", "POST"]
   }
 });
 
+// Parse DB_URL para configuração do session store
+let sessionStoreConfig;
+if (process.env.DB_URL) {
+  const url = new URL(process.env.DB_URL);
+  sessionStoreConfig = {
+    host: url.hostname,
+    port: parseInt(url.port),
+    user: url.username,
+    password: url.password,
+    database: url.pathname.slice(1),
+    clearExpired: true,
+    checkExpirationInterval: 90000,
+    expiration: 8640000,
+    createDatabaseTable: true,
+    schema: {
+      tableName: 'sessions',
+      columnNames: {
+        session_id: 'session_id',
+        expires: 'expires',
+        data: 'data'
+      }
+    }
+  };
+} else {
+  sessionStoreConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    clearExpired: true,
+    checkExpirationInterval: 90000,
+    expiration: 8640000,
+    createDatabaseTable: true,
+    schema: {
+      tableName: 'sessions',
+      columnNames: {
+        session_id: 'session_id',
+        expires: 'expires',
+        data: 'data'
+      }
+    }
+  };
+}
+
+const sessionStore = new MySQLStore(sessionStoreConfig);
+
 // Test session store connection
 sessionStore.onReady(() => {
-  console.log('MySQLStore ready');
+  console.log('✅ MySQLStore ready');
 });
 
 // Middleware
@@ -87,12 +118,13 @@ io.on('connection', (socket) => {
 
 // Session configuration
 app.use(session({
+  store: sessionStore,
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { 
     maxAge: 24 * 60 * 60 * 1000,
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true
   }
 }));
@@ -133,22 +165,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server after database initialization
-async function startServer() {
-  try {
-    const PORT = process.env.PORT || 3000;
-    
-    server.listen(PORT, () => {
-      console.log(`🚀 Servidor rodando na porta ${PORT}`);
-      console.log(`🌍 Acesse: http://localhost:${PORT}`);
-      console.log(`📊 Modo: ${process.env.MODE || 'Development'}`);
-    });
-    
-  } catch (error) {
-    console.error('❌ Error starting server:', error);
-    process.exit(1);
-  }
+const PORT = process.env.PORT || 3000;
+
+// Para Vercel, não precisamos do server.listen em produção
+if (process.env.NODE_ENV !== 'production') {
+  server.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`🌍 Acesse: http://localhost:${PORT}`);
+    console.log(`📊 Modo: ${process.env.MODE || 'Development'}`);
+  });
 }
 
-// Initialize server
-startServer();
+// Export para Vercel
+module.exports = app;

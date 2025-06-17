@@ -14,17 +14,18 @@ const poolConfig = process.env.DB_URL ? process.env.DB_URL : {
   connectionLimit: 10,
   queueLimit: 0,
   multipleStatements: true,
-  // Configurações de timeout para Railway
+  // Configurações para produção
   acquireTimeout: 60000,
   timeout: 60000,
-  reconnect: true
+  reconnect: true,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 };
 
 const pool = mysql.createPool(poolConfig);
 
-// Function to initialize database schema
+// Function to initialize database schema (apenas em desenvolvimento)
 async function initializeDatabase() {
-  if (process.env.MODE === 'Development') {
+  if (process.env.MODE === 'Development' && process.env.NODE_ENV !== 'production') {
     try {
       console.log('🔄 Development mode detected - Initializing database schema...');
       console.log('⚠️  WARNING: This will DROP all existing tables and recreate them!');
@@ -35,10 +36,10 @@ async function initializeDatabase() {
       
       // Remove comments and normalize line endings
       const cleanSQL = schemaSQL
-        .replace(/--.*$/gm, '') // Remove single-line comments
-        .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
-        .replace(/\r\n/g, '\n') // Normalize line endings
-        .replace(/\n+/g, ' ') // Replace multiple newlines with single space
+        .replace(/--.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n+/g, ' ')
         .trim();
       
       // Split SQL statements by semicolon and filter out empty ones
@@ -61,7 +62,6 @@ async function initializeDatabase() {
           const statement = statements[i];
           if (statement) {
             try {
-              // Show first part of statement for identification
               const preview = statement.length > 80 
                 ? statement.substring(0, 80) + '...' 
                 : statement;
@@ -73,7 +73,6 @@ async function initializeDatabase() {
             } catch (statementError) {
               console.error(`❌ Error in statement ${i + 1}:`, statementError.message);
               console.error(`   Statement: ${statement.substring(0, 200)}...`);
-              // Continue with other statements instead of stopping
             }
           }
         }
@@ -107,43 +106,49 @@ async function initializeDatabase() {
 
 // If using DB_URL, we still need to set the connection options
 if (process.env.DB_URL) {
-  // Parse the URL to extract connection details for logging
   const url = new URL(process.env.DB_URL);
   console.log(`🔗 Connecting to database: ${url.hostname}:${url.port}/${url.pathname.slice(1)}`);
 } else {
   console.log(`🔗 Connecting to database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
 }
 
-// Test connection and initialize schema
-pool.getConnection()
-  .then(async (connection) => {
-    console.log('✅ Connected to MySQL database');
-    connection.release();
-    
-    // Initialize database schema in development mode
-    await initializeDatabase();
-  })
-  .catch(err => {
-    console.error('❌ Error connecting to database:', err);
-  });
+// Test connection and initialize schema (apenas se não for produção)
+if (process.env.NODE_ENV !== 'production') {
+  pool.getConnection()
+    .then(async (connection) => {
+      console.log('✅ Connected to MySQL database');
+      connection.release();
+      
+      // Initialize database schema in development mode
+      await initializeDatabase();
+    })
+    .catch(err => {
+      console.error('❌ Error connecting to database:', err);
+    });
+}
 
 module.exports = {
-  pool, // Exportar o pool para uso direto em transações
+  pool,
   initializeDatabase,
   query: async (text, params) => {
     try {
-      console.log('Executing query:', text);
-      console.log('With params:', params);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Executing query:', text);
+        console.log('With params:', params);
+      }
       
       const [result] = await pool.execute(text, params);
       
-      // Check if this is a SELECT query (returns array) or INSERT/UPDATE/DELETE (returns object)
       if (text.trim().toUpperCase().startsWith('SELECT')) {
-        console.log('SELECT query result rows:', result.length);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('SELECT query result rows:', result.length);
+        }
         return { rows: result };
       } else {
-        console.log('Non-SELECT query result:', { insertId: result.insertId, affectedRows: result.affectedRows });
-        return result; // Return the full result object which includes insertId
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Non-SELECT query result:', { insertId: result.insertId, affectedRows: result.affectedRows });
+        }
+        return result;
       }
     } catch (error) {
       console.error('Database query error:', error);
