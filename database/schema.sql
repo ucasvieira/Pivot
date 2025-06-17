@@ -1,12 +1,27 @@
+
+-- Drop tables in reverse order of dependencies
+DROP TABLE IF EXISTS swipe_history;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS conversations;
+DROP TABLE IF EXISTS matches;
+DROP TABLE IF EXISTS project_skills;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS user_skills;
+DROP TABLE IF EXISTS skills;
+DROP TABLE IF EXISTS user_profiles;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS sessions;
+
 -- Sessions table
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE sessions (
   session_id varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   expires int(11) unsigned NOT NULL,
   data mediumtext COLLATE utf8mb4_unicode_ci,
   PRIMARY KEY (session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Users table
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255),
@@ -19,7 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- User profiles table
-CREATE TABLE IF NOT EXISTS user_profiles (
+CREATE TABLE user_profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
     first_name VARCHAR(100),
@@ -37,14 +52,14 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 );
 
 -- Skills table
-CREATE TABLE IF NOT EXISTS skills (
+CREATE TABLE skills (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     category VARCHAR(50)
 );
 
 -- User skills junction table
-CREATE TABLE IF NOT EXISTS user_skills (
+CREATE TABLE user_skills (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
     skill_id INT,
@@ -55,7 +70,7 @@ CREATE TABLE IF NOT EXISTS user_skills (
 );
 
 -- Projects table
-CREATE TABLE IF NOT EXISTS projects (
+CREATE TABLE projects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     idealizer_id INT,
     title VARCHAR(255) NOT NULL,
@@ -70,7 +85,7 @@ CREATE TABLE IF NOT EXISTS projects (
 );
 
 -- Project required skills junction table
-CREATE TABLE IF NOT EXISTS project_skills (
+CREATE TABLE project_skills (
     id INT AUTO_INCREMENT PRIMARY KEY,
     project_id INT,
     skill_id INT,
@@ -81,7 +96,7 @@ CREATE TABLE IF NOT EXISTS project_skills (
 );
 
 -- Matches table
-CREATE TABLE IF NOT EXISTS matches (
+CREATE TABLE matches (
     id INT AUTO_INCREMENT PRIMARY KEY,
     project_id INT,
     collaborator_id INT,
@@ -97,7 +112,7 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 
 -- Chat conversations table
-CREATE TABLE IF NOT EXISTS conversations (
+CREATE TABLE conversations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     match_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -105,21 +120,19 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 
 -- Chat messages table
-CREATE TABLE IF NOT EXISTS messages (
+CREATE TABLE messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     conversation_id INT,
     sender_id INT,
     message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Adicionar coluna is_read à tabela messages
-ALTER TABLE messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
-
 -- Swipe history table
-CREATE TABLE IF NOT EXISTS swipe_history (
+CREATE TABLE swipe_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
     target_id INT NOT NULL,

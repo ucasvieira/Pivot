@@ -55,7 +55,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ÚNICA configuração de Socket.IO
+// Socket.IO configuration
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
@@ -67,7 +67,6 @@ io.on('connection', (socket) => {
   socket.on('send-message', (messageData) => {
     console.log('Retransmitting message via socket:', messageData);
     
-    // APENAS retransmitir para outros usuários - NÃO salvar no banco
     socket.to(`conversation_${messageData.conversationId}`).emit('new-message', {
       senderId: messageData.senderId,
       message: messageData.message,
@@ -96,7 +95,6 @@ app.use(session({
     secure: false,
     httpOnly: true
   }
-  // Removendo o store temporariamente para usar MemoryStore
 }));
 
 // Passport middleware
@@ -110,9 +108,6 @@ app.use((req, res, next) => {
   res.locals.messages = req.flash();
   next();
 });
-
-// REMOVER ESTA LINHA - está duplicando a configuração do Socket.IO
-// require('./config/socket')(io); // <-- REMOVER
 
 // Routes
 app.use('/', require('./routes/index'));
@@ -138,7 +133,22 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+// Start server after database initialization
+async function startServer() {
+  try {
+    const PORT = process.env.PORT || 3000;
+    
+    server.listen(PORT, () => {
+      console.log(`🚀 Servidor rodando na porta ${PORT}`);
+      console.log(`🌍 Acesse: http://localhost:${PORT}`);
+      console.log(`📊 Modo: ${process.env.MODE || 'Development'}`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Error starting server:', error);
+    process.exit(1);
+  }
+}
+
+// Initialize server
+startServer();

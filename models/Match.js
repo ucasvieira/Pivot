@@ -53,74 +53,83 @@ class Match {
     const isInterested = Boolean(interested);
     const field = userType === 'collaborator' ? 'collaborator_interested' : 'idealizer_interested';
     
-    // Atualizar o interesse
-    const updateQuery = `UPDATE matches SET ${field} = ? WHERE id = ?`;
-    await db.query(updateQuery, [isInterested, matchId]);
+    // Obter uma conexão do pool para usar transação
+    const connection = await db.pool.getConnection();
     
-    // Buscar o match atualizado
-    const matchQuery = 'SELECT * FROM matches WHERE id = ?';
-    const matchResult = await db.query(matchQuery, [matchId]);
-    const match = matchResult.rows[0];
-    
-    if (!match) {
-      console.log(`Match não encontrado: ${matchId}`);
-      return null;
-    }
-
-    console.log(`Estado atual do match:`, {
-      id: match.id,
-      collaborator_interested: match.collaborator_interested,
-      idealizer_interested: match.idealizer_interested,
-      status: match.status
-    });
-
-    // Verificar se ambas as partes estão interessadas
-    const collaboratorInterested = Boolean(match.collaborator_interested);
-    const idealizerInterested = Boolean(match.idealizer_interested);
-    
-    if (collaboratorInterested && idealizerInterested && match.status !== 'accepted') {
-      console.log('Ambas as partes interessadas! Atualizando status para accepted e criando conversa');
+    try {
+      // Iniciar transação usando a conexão direta
+      await connection.beginTransaction();
       
-      // Iniciar transação para garantir consistência
-      await db.query('START TRANSACTION');
+      // Atualizar o interesse
+      const updateQuery = `UPDATE matches SET ${field} = ? WHERE id = ?`;
+      await connection.execute(updateQuery, [isInterested, matchId]);
       
-      try {
+      // Buscar o match atualizado
+      const matchQuery = 'SELECT * FROM matches WHERE id = ?';
+      const [matchRows] = await connection.execute(matchQuery, [matchId]);
+      const match = matchRows[0];
+      
+      if (!match) {
+        console.log(`Match não encontrado: ${matchId}`);
+        await connection.rollback();
+        return null;
+      }
+
+      console.log(`Estado atual do match:`, {
+        id: match.id,
+        collaborator_interested: match.collaborator_interested,
+        idealizer_interested: match.idealizer_interested,
+        status: match.status
+      });
+
+      // Verificar se ambas as partes estão interessadas
+      const collaboratorInterested = Boolean(match.collaborator_interested);
+      const idealizerInterested = Boolean(match.idealizer_interested);
+      
+      if (collaboratorInterested && idealizerInterested && match.status !== 'accepted') {
+        console.log('Ambas as partes interessadas! Atualizando status para accepted e criando conversa');
+        
         // Atualizar o status do match
-        await db.query('UPDATE matches SET status = ? WHERE id = ?', ['accepted', matchId]);
+        await connection.execute('UPDATE matches SET status = ? WHERE id = ?', ['accepted', matchId]);
         
         // Verificar se já existe uma conversa para este match
         const existingConversationQuery = 'SELECT * FROM conversations WHERE match_id = ?';
-        const existingConversation = await db.query(existingConversationQuery, [matchId]);
+        const [existingConversationRows] = await connection.execute(existingConversationQuery, [matchId]);
         
-        if (existingConversation.rows.length === 0) {
+        if (existingConversationRows.length === 0) {
           // Criar uma nova conversa
           const createConversationQuery = 'INSERT INTO conversations (match_id) VALUES (?)';
-          const conversationResult = await db.query(createConversationQuery, [matchId]);
+          const [conversationResult] = await connection.execute(createConversationQuery, [matchId]);
           
           console.log(`Conversa criada com ID: ${conversationResult.insertId} para match ${matchId}`);
         } else {
-          console.log(`Conversa já existe para match ${matchId}: ID ${existingConversation.rows[0].id}`);
+          console.log(`Conversa já existe para match ${matchId}: ID ${existingConversationRows[0].id}`);
         }
         
-        // Confirmar transação
-        await db.query('COMMIT');
+        // Buscar novamente para retornar dados atualizados
+        const [updatedMatchRows] = await connection.execute(matchQuery, [matchId]);
+        const updatedMatch = updatedMatchRows[0];
         
-      } catch (error) {
-        // Reverter transação em caso de erro
-        await db.query('ROLLBACK');
-        console.error('Erro ao criar conversa:', error);
-        throw error;
+        // Confirmar transação
+        await connection.commit();
+        
+        console.log(`Match aceito e conversa criada! Match ID: ${matchId}`);
+        return updatedMatch;
       }
       
-      // Buscar novamente para retornar dados atualizados
-      const updatedResult = await db.query(matchQuery, [matchId]);
-      const updatedMatch = updatedResult.rows[0];
+      // Confirmar transação para mudanças simples de interesse
+      await connection.commit();
+      return match;
       
-      console.log(`Match aceito e conversa criada! Match ID: ${matchId}`);
-      return updatedMatch;
+    } catch (error) {
+      // Reverter transação em caso de erro
+      await connection.rollback();
+      console.error('Erro ao processar match:', error);
+      throw error;
+    } finally {
+      // Sempre liberar a conexão
+      connection.release();
     }
-    
-    return match;
   }
 
   static async getUserMatches(userId, userType) {
@@ -160,7 +169,7 @@ class Match {
       LEFT JOIN user_profiles up2 ON u2.id = up2.user_id
       LEFT JOIN conversations c ON c.match_id = m.id
       WHERE (m.collaborator_id = ? OR m.idealizer_id = ?) 
-      AND m.status = 'accepted'
+        AND m.status = 'accepted'
       ORDER BY m.created_at DESC
     `;
 
