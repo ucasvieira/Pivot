@@ -1,10 +1,23 @@
-
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
-const GitHubStrategy = require('passport-github2').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+
+// Serialize/Deserialize user
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
 
 // Local Strategy
 passport.use(new LocalStrategy({
@@ -12,13 +25,15 @@ passport.use(new LocalStrategy({
 }, async (email, password, done) => {
   try {
     const user = await User.findByEmail(email);
+    
     if (!user) {
-      return done(null, false, { message: 'No user found with that email' });
+      return done(null, false, { message: 'Email não encontrado' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    
     if (!isMatch) {
-      return done(null, false, { message: 'Password incorrect' });
+      return done(null, false, { message: 'Senha incorreta' });
     }
 
     return done(null, user);
@@ -27,73 +42,89 @@ passport.use(new LocalStrategy({
   }
 }));
 
-// GitHub Strategy
-passport.use(new GitHubStrategy({
-  clientID: process.env.GITHUB_CLIENT_ID,
-  clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  callbackURL: `${process.env.APP_URL}/auth/github/callback`
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    let user = await User.findByGitHubId(profile.id);
-    
-    if (user) {
-      return done(null, user);
+// Google Strategy (apenas se as variáveis estiverem configuradas)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: `${process.env.APP_URL}/auth/google/callback`
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      // Verificar se usuário já existe
+      let user = await User.findByGoogleId(profile.id);
+      
+      if (user) {
+        return done(null, user);
+      }
+
+      // Verificar se existe usuário com mesmo email
+      user = await User.findByEmail(profile.emails[0].value);
+      
+      if (user) {
+        // Vincular conta Google ao usuário existente
+        await User.linkGoogleAccount(user.id, profile.id);
+        user.google_id = profile.id;
+        return done(null, user);
+      }
+
+      // Criar novo usuário
+      const newUser = await User.createFromGoogle({
+        google_id: profile.id,
+        email: profile.emails[0].value,
+        user_type: 'collaborator' // padrão
+      });
+
+      return done(null, newUser);
+    } catch (error) {
+      return done(error, null);
     }
+  }));
+} else {
+  console.log('⚠️  Google OAuth não configurado - variáveis de ambiente ausentes');
+}
 
-    // Create new user
-    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
-    user = await User.create({
-      email: email,
-      github_id: profile.id,
-      user_type: 'collaborator' // Default for GitHub users
-    });
+// GitHub Strategy (apenas se as variáveis estiverem configuradas)
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: `${process.env.APP_URL}/auth/github/callback`
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      // Verificar se usuário já existe
+      let user = await User.findByGitHubId(profile.id);
+      
+      if (user) {
+        return done(null, user);
+      }
 
-    return done(null, user);
-  } catch (error) {
-    return done(error);
-  }
-}));
+      // Verificar se existe usuário com mesmo email
+      const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+      if (email) {
+        user = await User.findByEmail(email);
+        
+        if (user) {
+          // Vincular conta GitHub ao usuário existente
+          await User.linkGitHubAccount(user.id, profile.id);
+          user.github_id = profile.id;
+          return done(null, user);
+        }
+      }
 
-// Google Strategy
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: `${process.env.APP_URL}/auth/google/callback`
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    let user = await User.findByGoogleId(profile.id);
-    
-    if (user) {
-      return done(null, user);
+      // Criar novo usuário
+      const newUser = await User.createFromGitHub({
+        github_id: profile.id,
+        email: email,
+        user_type: 'collaborator' // padrão
+      });
+
+      return done(null, newUser);
+    } catch (error) {
+      return done(error, null);
     }
+  }));
+} else {
+  console.log('⚠️  GitHub OAuth não configurado - variáveis de ambiente ausentes');
+}
 
-    // Create new user
-    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
-    user = await User.create({
-      email: email,
-      google_id: profile.id,
-      user_type: 'collaborator' // Default for Google users
-    });
-
-    return done(null, user);
-  } catch (error) {
-    return done(error);
-  }
-}));
-
-passport.serializeUser((user, done) => {
-  console.log('Serializing user:', { id: user.id, email: user.email });
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    console.log('Deserializing user ID:', id);
-    const user = await User.findById(id);
-    console.log('Found user during deserialize:', user ? 'YES' : 'NO');
-    done(null, user);
-  } catch (error) {
-    console.error('Deserialize error:', error);
-    done(error);
-  }
-});
+module.exports = passport;

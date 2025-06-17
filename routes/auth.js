@@ -1,107 +1,155 @@
-
 const express = require('express');
-const router = express.Router();
 const passport = require('passport');
+const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
-const { ensureGuest } = require('../middleware/auth');
 const User = require('../models/User');
+const router = express.Router();
 
-// Registration page
-router.get('/register', ensureGuest, (req, res) => {
-  res.render('auth/register', { title: 'Register' });
-});
-
-// Registration handler
-router.post('/register', [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-  body('user_type').isIn(['idealizer', 'collaborator'])
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      req.flash('error', 'Please check your input');
-      return res.redirect('/auth/register');
-    }
-
-    const { email, password, user_type } = req.body;
-
-    // Check if user already exists
-    const existingUser = await User.findByEmail(email);
-    if (existingUser) {
-      req.flash('error', 'User with this email already exists');
-      return res.redirect('/auth/register');
-    }
-
-    // Create new user
-    const user = await User.create({ email, password, user_type });
+// Middleware para verificar se OAuth está disponível
+const checkOAuthAvailable = (provider) => {
+  return (req, res, next) => {
+    const isGoogleAvailable = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
+    const isGitHubAvailable = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET;
     
-    req.login(user, (err) => {
-      if (err) {
-        console.error('Login error:', err);
-        req.flash('error', 'Registration successful, please log in');
-        return res.redirect('/auth/login');
-      }
-      req.flash('success', 'Registration successful! Please complete your profile');
-      res.redirect('/profile/setup');
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    req.flash('error', 'Registration failed');
-    res.redirect('/auth/register');
-  }
-});
+    if (provider === 'google' && !isGoogleAvailable) {
+      req.flash('error', 'Login com Google não está disponível no momento');
+      return res.redirect('/auth/login');
+    }
+    
+    if (provider === 'github' && !isGitHubAvailable) {
+      req.flash('error', 'Login com GitHub não está disponível no momento');
+      return res.redirect('/auth/login');
+    }
+    
+    next();
+  };
+};
 
 // Login page
-router.get('/login', ensureGuest, (req, res) => {
-  res.render('auth/login', { title: 'Login' });
+router.get('/login', (req, res) => {
+  const isGoogleAvailable = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
+  const isGitHubAvailable = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET;
+  
+  res.render('auth/login', { 
+    title: 'Login',
+    isGoogleAvailable,
+    isGitHubAvailable
+  });
 });
 
-// Login handler
-router.post('/login', passport.authenticate('local', {
-  successRedirect: '/dashboard',
-  failureRedirect: '/auth/login',
-  failureFlash: true
-}), (req, res) => {
-  console.log('Login successful for user:', req.user);
-  // ... resto do código
+// Register page
+router.get('/register', (req, res) => {
+  res.render('auth/register', { title: 'Cadastro' });
 });
 
-// GitHub OAuth
-router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
-
-router.get('/github/callback', passport.authenticate('github', {
-  failureRedirect: '/auth/login',
-  failureFlash: true
-}), (req, res) => {
-  if (!req.user.is_profile_complete) {
-    res.redirect('/profile/setup');
-  } else {
-    res.redirect('/dashboard');
+// Local login
+router.post('/login', 
+  [
+    body('email').isEmail().withMessage('Email inválido'),
+    body('password').notEmpty().withMessage('Senha é obrigatória')
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      req.flash('error', errors.array()[0].msg);
+      return res.redirect('/auth/login');
+    }
+    
+    passport.authenticate('local', {
+      successRedirect: '/profile/setup',
+      failureRedirect: '/auth/login',
+      failureFlash: true
+    })(req, res, next);
   }
-});
+);
 
-// Google OAuth
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+// Local register
+router.post('/register',
+  [
+    body('email').isEmail().withMessage('Email inválido'),
+    body('password').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres'),
+    body('user_type').isIn(['idealizer', 'collaborator']).withMessage('Tipo de usuário inválido')
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        req.flash('error', errors.array()[0].msg);
+        return res.redirect('/auth/register');
+      }
 
-router.get('/google/callback', passport.authenticate('google', {
-  failureRedirect: '/auth/login',
-  failureFlash: true
-}), (req, res) => {
-  if (!req.user.is_profile_complete) {
-    res.redirect('/profile/setup');
-  } else {
-    res.redirect('/dashboard');
+      const { email, password, user_type } = req.body;
+
+      // Verificar se usuário já existe
+      const existingUser = await User.findByEmail(email);
+      if (existingUser) {
+        req.flash('error', 'Email já está em uso');
+        return res.redirect('/auth/register');
+      }
+
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Criar usuário
+      const user = await User.create({
+        email,
+        password: hashedPassword,
+        user_type
+      });
+
+      // Login automático
+      req.login(user, (err) => {
+        if (err) {
+          req.flash('error', 'Erro ao fazer login');
+          return res.redirect('/auth/login');
+        }
+        res.redirect('/profile/setup');
+      });
+
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      req.flash('error', 'Erro interno do servidor');
+      res.redirect('/auth/register');
+    }
   }
-});
+);
+
+// Google OAuth routes (apenas se configurado)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  router.get('/google', 
+    checkOAuthAvailable('google'),
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  router.get('/google/callback',
+    passport.authenticate('google', { failureRedirect: '/auth/login' }),
+    (req, res) => {
+      res.redirect('/profile/setup');
+    }
+  );
+}
+
+// GitHub OAuth routes (apenas se configurado)
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  router.get('/github',
+    checkOAuthAvailable('github'),
+    passport.authenticate('github', { scope: ['user:email'] })
+  );
+
+  router.get('/github/callback',
+    passport.authenticate('github', { failureRedirect: '/auth/login' }),
+    (req, res) => {
+      res.redirect('/profile/setup');
+    }
+  );
+}
 
 // Logout
 router.post('/logout', (req, res) => {
   req.logout((err) => {
     if (err) {
-      console.error('Logout error:', err);
+      console.error('Erro no logout:', err);
     }
-    req.flash('success', 'You have been logged out');
     res.redirect('/');
   });
 });
