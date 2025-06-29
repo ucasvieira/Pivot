@@ -1,4 +1,3 @@
-
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 
@@ -33,6 +32,42 @@ class User {
       github_id: github_id || null,
       google_id: google_id || null
     };
+  }
+
+  // ADICIONE ESTE MÉTODO - é o que está faltando
+  static async createFromGoogle(googleData) {
+    try {
+      const userData = {
+        email: googleData.email,
+        password: null, // Usuários OAuth não têm senha
+        user_type: googleData.user_type || 'collaborator',
+        github_id: null,
+        google_id: googleData.google_id
+      };
+
+      return await this.create(userData);
+    } catch (error) {
+      console.error('Error creating user from Google:', error);
+      throw error;
+    }
+  }
+
+  // ADICIONE ESTE MÉTODO TAMBÉM para GitHub (caso precise no futuro)
+  static async createFromGitHub(githubData) {
+    try {
+      const userData = {
+        email: githubData.email,
+        password: null, // Usuários OAuth não têm senha
+        user_type: githubData.user_type || 'collaborator',
+        github_id: githubData.github_id,
+        google_id: null
+      };
+
+      return await this.create(userData);
+    } catch (error) {
+      console.error('Error creating user from GitHub:', error);
+      throw error;
+    }
   }
 
   static async findById(id) {
