@@ -124,6 +124,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: '/auth/login' }),
     (req, res) => {
+      console.log('🔍 Google callback - User:', req.user ? req.user.id : 'not authenticated');
+      console.log('📋 Profile complete:', req.user ? req.user.is_profile_complete : 'N/A');
+      
+      // Sempre redirecionar para profile/setup - o middleware decidirá se precisa configurar
       res.redirect('/profile/setup');
     }
   );

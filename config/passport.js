@@ -61,36 +61,48 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${process.env.APP_URL}/auth/google/callback`
+    callbackURL: "/auth/google/callback"
   }, async (accessToken, refreshToken, profile, done) => {
     try {
+      console.log('🔍 Google OAuth - Profile received:', {
+        id: profile.id,
+        email: profile.emails[0].value,
+        name: profile.displayName
+      });
+  
       // Verificar se usuário já existe
       let user = await User.findByGoogleId(profile.id);
       
       if (user) {
+        console.log('✅ Existing Google user found:', user.id);
         return done(null, user);
       }
-
+  
       // Verificar se existe usuário com mesmo email
       user = await User.findByEmail(profile.emails[0].value);
       
       if (user) {
-        // Vincular conta Google ao usuário existente
-        await User.linkGoogleAccount(user.id, profile.id);
-        user.google_id = profile.id;
-        return done(null, user);
+        console.log('📧 User with same email exists, linking Google account');
+        // Aqui você pode optar por vincular a conta ou retornar erro
+        // Por enquanto, vamos retornar erro para evitar conflitos
+        return done(null, false, { message: 'Email já está em uso com outro método de login' });
       }
-
+  
       // Criar novo usuário
-      const newUser = await User.createFromGoogle({
-        google_id: profile.id,
+      console.log('➕ Creating new Google user');
+      user = await User.create({
         email: profile.emails[0].value,
-        user_type: 'collaborator' // padrão
+        password: null,
+        user_type: 'collaborator', // Padrão para OAuth
+        google_id: profile.id
       });
-
-      return done(null, newUser);
+  
+      console.log('✅ New Google user created:', user.id);
+      return done(null, user);
+  
     } catch (error) {
-      return done(error, null);
+      console.error('❌ Google OAuth error:', error);
+      return done(error);
     }
   }));
 } else {

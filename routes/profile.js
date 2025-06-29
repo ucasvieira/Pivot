@@ -10,89 +10,85 @@ const Skill = require('../models/Skill');
 // Profile setup page
 router.get('/setup', ensureAuthenticated, async (req, res) => {
   try {
-    const skills = await Skill.getAll();
-    const userProfile = await Profile.findByUserId(req.user.id);
-    const userSkills = await Skill.getUserSkills(req.user.id);
+    console.log('🔍 Profile setup page for user:', req.user.id);
+    console.log('👤 User profile complete status:', req.user.is_profile_complete);
+    
+    // Se o perfil já está completo, redirecionar para dashboard
+    if (req.user.is_profile_complete) {
+      console.log('✅ Profile already complete, redirecting to dashboard');
+      return res.redirect('/dashboard');
+    }
 
-    res.render('profile/setup', {
-      title: 'Complete Your Profile',
+    // Verificar se já existe um perfil (pode estar incompleto)
+    const Profile = require('../models/Profile');
+    const existingProfile = await Profile.findByUserId(req.user.id);
+    
+    console.log('📋 Existing profile data:', existingProfile ? 'Found' : 'Not found');
+
+    res.render('profile/setup', { 
+      title: 'Configurar Perfil',
       user: req.user,
-      profile: userProfile,
-      skills,
-      userSkills
+      profile: existingProfile || {} // Passar dados existentes se houver
     });
   } catch (error) {
-    console.error('Profile setup error:', error);
-    req.flash('error', 'Error loading profile setup');
+    console.error('❌ Profile setup page error:', error);
+    req.flash('error', 'Erro ao carregar página de perfil');
     res.redirect('/dashboard');
   }
 });
 
 // Profile setup handler
 router.post('/setup', ensureAuthenticated, [
-  body('first_name').trim().isLength({ min: 1 }),
-  body('last_name').trim().isLength({ min: 1 }),
-  body('bio').trim().isLength({ min: 10 }),
-  body('location').trim().isLength({ min: 1 }),
-  body('experience_level').isIn(['beginner', 'intermediate', 'advanced'])
+  body('first_name').notEmpty().withMessage('Nome é obrigatório'),
+  body('last_name').notEmpty().withMessage('Sobrenome é obrigatório'),
+  body('experience_level').isIn(['beginner', 'intermediate', 'advanced']).withMessage('Nível de experiência inválido'),
+  body('availability').isIn(['full-time', 'part-time', 'freelance', 'not-available']).withMessage('Disponibilidade inválida')
 ], async (req, res) => {
   try {
+    console.log('📝 Profile setup attempt for user:', req.user.id);
+    console.log('📋 Form data received:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      req.flash('error', 'Please fill in all required fields correctly');
+      console.log('❌ Validation errors:', errors.array());
+      req.flash('error', errors.array()[0].msg);
       return res.redirect('/profile/setup');
     }
 
     const {
-      first_name, last_name, bio, location, experience_level,
-      availability, phone, linkedin, github, portfolio,
-      skills: selectedSkills
+      first_name, last_name, bio, location,
+      experience_level, contact_info, portfolio_links, availability
     } = req.body;
 
-    // Prepare contact info and portfolio links
-    const contact_info = {
-      phone: phone || '',
-      linkedin: linkedin || '',
-      github: github || ''
-    };
-
-    const portfolio_links = {
-      portfolio: portfolio || ''
-    };
-
-    // Create or update profile
     const profileData = {
-      first_name,
-      last_name,
-      bio,
-      location,
+      first_name: first_name.trim(),
+      last_name: last_name.trim(),
+      bio: bio ? bio.trim() : null,
+      location: location ? location.trim() : null,
       experience_level,
-      contact_info,
-      portfolio_links,
-      availability: availability || null,
-      profile_picture: null
+      contact_info: contact_info ? contact_info.trim() : null,
+      portfolio_links: portfolio_links ? portfolio_links.trim() : null,
+      availability
     };
 
+    console.log('💾 Saving profile data:', profileData);
+
+    const Profile = require('../models/Profile');
     await Profile.upsert(req.user.id, profileData);
 
-    // Update user skills if user is a collaborator
-    if (req.user.user_type === 'collaborator' && selectedSkills) {
-      const skillsArray = Array.isArray(selectedSkills) ? selectedSkills : [selectedSkills];
-      const skillsData = skillsArray.map(skillId => ({
-        skill_id: parseInt(skillId),
-        proficiency_level: experience_level
-      }));
-      await Skill.updateUserSkills(req.user.id, skillsData);
+    console.log('✅ Profile saved successfully');
+    req.flash('success', 'Perfil configurado com sucesso!');
+    
+    // Redirecionar baseado no tipo de usuário
+    if (req.user.user_type === 'idealizer') {
+      res.redirect('/dashboard');
+    } else {
+      res.redirect('/dashboard');
     }
 
-    // Mark profile as complete
-    await User.updateProfileComplete(req.user.id, true);
-
-    req.flash('success', 'Profile completed successfully!');
-    res.redirect('/dashboard');
   } catch (error) {
-    console.error('Profile setup error:', error);
-    req.flash('error', 'Error saving profile');
+    console.error('❌ Profile setup error:', error);
+    req.flash('error', 'Erro ao salvar perfil. Tente novamente.');
     res.redirect('/profile/setup');
   }
 });
