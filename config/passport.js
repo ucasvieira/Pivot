@@ -24,20 +24,34 @@ passport.use(new LocalStrategy({
   usernameField: 'email'
 }, async (email, password, done) => {
   try {
+    console.log('🔍 Local strategy - searching user:', email);
     const user = await User.findByEmail(email);
     
     if (!user) {
+      console.log('❌ User not found:', email);
       return done(null, false, { message: 'Email não encontrado' });
     }
 
+    console.log('✅ User found:', { id: user.id, email: user.email });
+
+    // Verificar se usuário tem senha (pode ser OAuth)
+    if (!user.password) {
+      console.log('❌ User has no password (OAuth user):', email);
+      return done(null, false, { message: 'Use login social para esta conta' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('🔐 Password match:', isMatch);
     
     if (!isMatch) {
+      console.log('❌ Password mismatch for:', email);
       return done(null, false, { message: 'Senha incorreta' });
     }
 
+    console.log('✅ Authentication successful for:', email);
     return done(null, user);
   } catch (error) {
+    console.error('❌ Local strategy error:', error);
     return done(error);
   }
 }));
