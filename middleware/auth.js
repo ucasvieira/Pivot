@@ -1,3 +1,17 @@
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  req.flash('error', 'Por favor, faça login para continuar');
+  res.redirect('/auth/login');
+}
+
+function ensureGuest(req, res, next) {
+  if (req.isAuthenticated()) {
+    return res.redirect('/dashboard');
+  }
+  next();
+}
 
 function ensureProfileComplete(req, res, next) {
   console.log('🔍 Checking profile completion for user:', req.user ? req.user.id : 'not authenticated');
@@ -13,27 +27,12 @@ function ensureProfileComplete(req, res, next) {
   next();
 }
 
-function ensureGuest(req, res, next) {
-  if (req.isAuthenticated()) {
-    return res.redirect('/dashboard');
-  }
-  next();
-}
-
-function ensureProfileComplete(req, res, next) {
-  if (req.user && !req.user.is_profile_complete) {
-    req.flash('info', 'Please complete your profile to continue');
-    return res.redirect('/profile/setup');
-  }
-  next();
-}
-
 function ensureUserType(userType) {
   return (req, res, next) => {
     if (req.user && req.user.user_type === userType) {
       return next();
     }
-    req.flash('error', 'Access denied');
+    req.flash('error', 'Acesso negado');
     res.redirect('/dashboard');
   };
 }
