@@ -129,11 +129,14 @@ app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  name: 'pivot.sid', // Nome específico para o cookie
   cookie: { 
-    maxAge: 24 * 60 * 60 * 1000,
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true
-  }
+    maxAge: 24 * 60 * 60 * 1000, // 24 horas
+    secure: false, // Manter false no Railway por enquanto
+    httpOnly: true,
+    sameSite: 'lax' // Importante para Railway
+  },
+  rolling: true // Renovar cookie a cada request
 }));
 
 // Passport middleware
