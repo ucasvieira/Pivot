@@ -16,9 +16,16 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.APP_URL || "*",
-    methods: ["GET", "POST"]
-  }
+    origin: process.env.NODE_ENV === 'production' 
+      ? [process.env.APP_URL, process.env.FRONTEND_URL].filter(Boolean)
+      : "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // Parse DB_URL para configuração do session store
@@ -167,14 +174,12 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Para Vercel, não precisamos do server.listen em produção
-if (process.env.NODE_ENV !== 'production') {
-  server.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    console.log(`🌍 Acesse: http://localhost:${PORT}`);
-    console.log(`📊 Modo: ${process.env.MODE || 'Development'}`);
-  });
-}
+// Railway precisa do server.listen
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🌍 Modo: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📊 Railway deployment ready`);
+});
 
-// Export para Vercel
-module.exports = app;
+// Não exportar app para Railway (diferente da Vercel)
+// module.exports = app;
