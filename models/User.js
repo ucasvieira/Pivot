@@ -133,6 +133,18 @@ class User {
     const result = await db.query(query, params);
     return result.rows;
   }
+
+
+  static async updateUserType(userId, userType) {
+    try {
+      const query = 'UPDATE users SET user_type = ? WHERE id = ?';
+      const result = await db.query(query, [userType, userId]);
+      return result;
+    } catch (error) {
+      console.error('Error updating user type:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = User;

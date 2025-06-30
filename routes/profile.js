@@ -23,12 +23,22 @@ router.get('/setup', ensureAuthenticated, async (req, res) => {
     const Profile = require('../models/Profile');
     const existingProfile = await Profile.findByUserId(req.user.id);
     
+    // Buscar todas as skills disponíveis
+    const skills = await Skill.getAll();
+    
+    // Buscar skills do usuário (pode ser vazio para novos usuários)
+    const userSkills = await Skill.getUserSkills(req.user.id) || [];
+    
     console.log('📋 Existing profile data:', existingProfile ? 'Found' : 'Not found');
+    console.log('🎯 Skills loaded:', skills ? skills.length : 0);
+    console.log('👤 User skills loaded:', userSkills ? userSkills.length : 0);
 
     res.render('profile/setup', { 
       title: 'Configurar Perfil',
       user: req.user,
-      profile: existingProfile || {} // Passar dados existentes se houver
+      profile: existingProfile || {}, // Passar dados existentes se houver
+      skills: skills || [], // Adicionar skills disponíveis
+      userSkills: userSkills || [] // Adicionar skills do usuário
     });
   } catch (error) {
     console.error('❌ Profile setup page error:', error);
@@ -41,8 +51,9 @@ router.get('/setup', ensureAuthenticated, async (req, res) => {
 router.post('/setup', ensureAuthenticated, [
   body('first_name').notEmpty().withMessage('Nome é obrigatório'),
   body('last_name').notEmpty().withMessage('Sobrenome é obrigatório'),
-  body('experience_level').isIn(['beginner', 'intermediate', 'advanced']).withMessage('Nível de experiência inválido'),
-  body('availability').isIn(['full-time', 'part-time', 'freelance', 'not-available']).withMessage('Disponibilidade inválida')
+  body('bio').isLength({ min: 10 }).withMessage('Bio deve ter pelo menos 10 caracteres'),
+  body('location').notEmpty().withMessage('Localização é obrigatória'),
+  body('experience_level').isIn(['beginner', 'intermediate', 'advanced']).withMessage('Nível de experiência inválido')
 ], async (req, res) => {
   try {
     console.log('📝 Profile setup attempt for user:', req.user.id);
@@ -56,35 +67,53 @@ router.post('/setup', ensureAuthenticated, [
     }
 
     const {
-      first_name, last_name, bio, location,
-      experience_level, contact_info, portfolio_links, availability
+      first_name, last_name, bio, location, experience_level, availability,
+      phone, linkedin, github, portfolio, skills
     } = req.body;
+
+    // Preparar contact_info como JSON
+    const contact_info = JSON.stringify({
+      phone: phone || '',
+      linkedin: linkedin || '',
+      github: github || ''
+    });
+
+    // Preparar portfolio_links como JSON  
+    const portfolio_links = JSON.stringify({
+      portfolio: portfolio || ''
+    });
 
     const profileData = {
       first_name: first_name.trim(),
       last_name: last_name.trim(),
-      bio: bio ? bio.trim() : null,
-      location: location ? location.trim() : null,
+      bio: bio.trim(),
+      location: location.trim(),
       experience_level,
-      contact_info: contact_info ? contact_info.trim() : null,
-      portfolio_links: portfolio_links ? portfolio_links.trim() : null,
-      availability
+      contact_info,
+      portfolio_links,
+      availability: availability || null
     };
 
     console.log('💾 Saving profile data:', profileData);
 
-    const Profile = require('../models/Profile');
+    // Salvar perfil
     await Profile.upsert(req.user.id, profileData);
+
+    // Salvar skills do usuário se for collaborator
+    if (req.user.user_type === 'collaborator' && skills) {
+      const skillsArray = Array.isArray(skills) ? skills : [skills];
+      const skillsData = skillsArray.map(skillId => ({
+        skill_id: parseInt(skillId),
+        proficiency_level: experience_level // Usar o nível de experiência como proficiência
+      }));
+      
+      console.log('🎯 Saving user skills:', skillsData);
+      await Skill.updateUserSkills(req.user.id, skillsData);
+    }
 
     console.log('✅ Profile saved successfully');
     req.flash('success', 'Perfil configurado com sucesso!');
-    
-    // Redirecionar baseado no tipo de usuário
-    if (req.user.user_type === 'idealizer') {
-      res.redirect('/dashboard');
-    } else {
-      res.redirect('/dashboard');
-    }
+    res.redirect('/dashboard');
 
   } catch (error) {
     console.error('❌ Profile setup error:', error);

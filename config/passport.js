@@ -69,7 +69,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         email: profile.emails[0].value,
         name: profile.displayName
       });
-  
+    
       // Verificar se usuário já existe
       let user = await User.findByGoogleId(profile.id);
       
@@ -77,36 +77,32 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         console.log('✅ Existing Google user found:', user.id);
         return done(null, user);
       }
-  
+    
       // Verificar se existe usuário com mesmo email
       user = await User.findByEmail(profile.emails[0].value);
       
       if (user) {
         console.log('📧 User with same email exists, linking Google account');
-        // Aqui você pode optar por vincular a conta ou retornar erro
-        // Por enquanto, vamos retornar erro para evitar conflitos
         return done(null, false, { message: 'Email já está em uso com outro método de login' });
       }
-  
-      // Criar novo usuário
+    
+      // Criar novo usuário SEM user_type definido
       console.log('➕ Creating new Google user');
       user = await User.create({
         email: profile.emails[0].value,
         password: null,
-        user_type: 'collaborator', // Padrão para OAuth
+        user_type: null, // ← Mudança aqui: não definir tipo ainda
         google_id: profile.id
       });
-  
+    
       console.log('✅ New Google user created:', user.id);
       return done(null, user);
-  
+    
     } catch (error) {
       console.error('❌ Google OAuth error:', error);
       return done(error);
     }
   }));
-} else {
-  console.log('⚠️  Google OAuth não configurado - variáveis de ambiente ausentes');
 }
 
 // GitHub Strategy (apenas se as variáveis estiverem configuradas)
@@ -137,11 +133,11 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         }
       }
 
-      // Criar novo usuário
+      // Criar novo usuário SEM user_type definido
       const newUser = await User.createFromGitHub({
         github_id: profile.id,
         email: email,
-        user_type: 'collaborator' // padrão
+        user_type: null // ← Mudança aqui: não definir tipo ainda
       });
 
       return done(null, newUser);
@@ -149,8 +145,6 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
       return done(error, null);
     }
   }));
-} else {
-  console.log('⚠️  GitHub OAuth não configurado - variáveis de ambiente ausentes');
 }
 
 module.exports = passport;

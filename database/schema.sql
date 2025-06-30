@@ -25,7 +25,7 @@ CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255),
-    user_type ENUM('idealizer', 'collaborator') NOT NULL,
+    user_type ENUM('idealizer', 'collaborator') NULL,
     github_id VARCHAR(255),
     google_id VARCHAR(255),
     is_profile_complete BOOLEAN DEFAULT FALSE,

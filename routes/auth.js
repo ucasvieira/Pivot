@@ -10,17 +10,17 @@ const checkOAuthAvailable = (provider) => {
   return (req, res, next) => {
     const isGoogleAvailable = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
     const isGitHubAvailable = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET;
-    
+
     if (provider === 'google' && !isGoogleAvailable) {
       req.flash('error', 'Login com Google não está disponível no momento');
       return res.redirect('/auth/login');
     }
-    
+
     if (provider === 'github' && !isGitHubAvailable) {
       req.flash('error', 'Login com GitHub não está disponível no momento');
       return res.redirect('/auth/login');
     }
-    
+
     next();
   };
 };
@@ -29,8 +29,8 @@ const checkOAuthAvailable = (provider) => {
 router.get('/login', (req, res) => {
   const isGoogleAvailable = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
   const isGitHubAvailable = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET;
-  
-  res.render('auth/login', { 
+
+  res.render('auth/login', {
     title: 'Login',
     isGoogleAvailable,
     isGitHubAvailable
@@ -43,7 +43,7 @@ router.get('/register', (req, res) => {
 });
 
 // Local login
-router.post('/login', 
+router.post('/login',
   [
     body('email').isEmail().withMessage('Email inválido'),
     body('password').notEmpty().withMessage('Senha é obrigatória')
@@ -54,7 +54,7 @@ router.post('/login',
       req.flash('error', errors.array()[0].msg);
       return res.redirect('/auth/login');
     }
-    
+
     passport.authenticate('local', {
       successRedirect: '/profile/setup',
       failureRedirect: '/auth/login',
@@ -116,18 +116,24 @@ router.post('/register',
 
 // Google OAuth routes (apenas se configurado)
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  router.get('/google', 
+  router.get('/google',
     checkOAuthAvailable('google'),
     passport.authenticate('google', { scope: ['profile', 'email'] })
   );
 
+  // Google OAuth callback
   router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: '/auth/login' }),
     (req, res) => {
       console.log('🔍 Google callback - User:', req.user ? req.user.id : 'not authenticated');
-      console.log('📋 Profile complete:', req.user ? req.user.is_profile_complete : 'N/A');
-      
-      // Sempre redirecionar para profile/setup - o middleware decidirá se precisa configurar
+      console.log('📋 User type:', req.user ? req.user.user_type : 'N/A');
+
+      // Se usuário não tem tipo definido, redirecionar para escolha
+      if (req.user && !req.user.user_type) {
+        return res.redirect('/auth/choose-type');
+      }
+
+      // Se já tem tipo, ir para setup do perfil
       res.redirect('/profile/setup');
     }
   );
@@ -143,10 +149,62 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
   router.get('/github/callback',
     passport.authenticate('github', { failureRedirect: '/auth/login' }),
     (req, res) => {
+      console.log('🔍 GitHub callback - User:', req.user ? req.user.id : 'not authenticated');
+      console.log('📋 User type:', req.user ? req.user.user_type : 'N/A');
+
+      // Se usuário não tem tipo definido, redirecionar para escolha
+      if (req.user && !req.user.user_type) {
+        return res.redirect('/auth/choose-type');
+      }
+
+      // Se já tem tipo, ir para setup do perfil
       res.redirect('/profile/setup');
     }
   );
 }
+
+// Página para escolher tipo de usuário (OAuth)
+router.get('/choose-type', (req, res) => {
+  // Verificar se usuário está logado e não tem tipo definido
+  if (!req.user || req.user.user_type) {
+    return res.redirect('/dashboard');
+  }
+
+  res.render('auth/choose-type', {
+    title: 'Escolher Tipo de Conta',
+    user: req.user
+  });
+});
+
+// Processar escolha do tipo de usuário
+router.post('/choose-type', async (req, res) => {
+  try {
+    if (!req.user || req.user.user_type) {
+      return res.redirect('/dashboard');
+    }
+
+    const { user_type } = req.body;
+
+    if (!user_type || !['idealizer', 'collaborator'].includes(user_type)) {
+      req.flash('error', 'Tipo de usuário inválido');
+      return res.redirect('/auth/choose-type');
+    }
+
+    // Atualizar tipo do usuário
+    await User.updateUserType(req.user.id, user_type);
+
+    // Atualizar objeto do usuário na sessão
+    req.user.user_type = user_type;
+
+    console.log('✅ User type updated:', { userId: req.user.id, userType: user_type });
+    res.redirect('/profile/setup');
+
+  } catch (error) {
+    console.error('❌ Error updating user type:', error);
+    req.flash('error', 'Erro ao definir tipo de usuário');
+    res.redirect('/auth/choose-type');
+  }
+});
 
 // Logout
 router.post('/logout', (req, res) => {
