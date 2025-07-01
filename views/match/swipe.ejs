@@ -1,9 +1,23 @@
-
-
-
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-6">
+            <!-- Project Context Info for Idealizers -->
+            <% if (selectedProject) { %>
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><i class="bi bi-lightbulb me-2"></i>Descobrindo colaboradores para:</strong>
+                            <div class="mt-1">
+                                <span class="fw-bold"><%= selectedProject.title %></span>
+                            </div>
+                        </div>
+                        <a href="/match/select-project" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-repeat me-1"></i>Trocar Projeto
+                        </a>
+                    </div>
+                </div>
+            <% } %>
+
             <div class="text-center mb-4">
                 <h1 class="h3 fw-bold">Discover 
                     <% if (swipeType === 'projects') { %>
@@ -25,8 +39,9 @@
                 <% if (items && items.length > 0) { %>
                     <% items.forEach(function(item, index) { %>
                         <div class="swipe-card position-absolute w-100" 
-                             data-id="<%= swipeType === 'projects' ? item.id : item.id %>"
+                             data-id="<%= item.id %>"
                              data-type="<%= swipeType === 'projects' ? 'project' : 'user' %>"
+                             <% if (selectedProject) { %>data-project-id="<%= selectedProject.id %>"<% } %>
                              style="z-index: <%= items.length - index %>; transform: translateY(<%= index * 5 %>px) scale(<%= 1 - (index * 0.02) %>);">
                             
                             <div class="card border-0 shadow-lg h-100">
@@ -34,7 +49,10 @@
                                     <% if (swipeType === 'projects') { %>
                                         <!-- Project Card -->
                                         <div class="d-flex justify-content-between align-items-start mb-3">
-                                            <h4 class="fw-bold mb-0"><%= item.title %></h4>
+                                            <h4 class="fw-bold mb-0 card-clickable" onclick="openDetailsModal('<%= item.id %>', 'project')">
+                                                <%= item.title %>
+                                                <i class="bi bi-info-circle ms-2 text-primary small"></i>
+                                            </h4>
                                             <span class="badge bg-success">Active</span>
                                         </div>
                                         
@@ -78,15 +96,22 @@
                                     <% } else { %>
                                         <!-- Collaborator Card -->
                                         <div class="text-center mb-3">
-                                            <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-                                                 style="width: 80px; height: 80px; font-size: 1.5rem;">
+                                            <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3 card-clickable" 
+                                                 onclick="openDetailsModal('<%= item.id %>', 'user')"
+                                                 style="width: 80px; height: 80px; font-size: 1.5rem; cursor: pointer;">
                                                 <% if (item.profile_picture) { %>
                                                     <img src="<%= item.profile_picture %>" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">
                                                 <% } else { %>
                                                     <%= item.first_name ? item.first_name.charAt(0) : item.email.charAt(0) %>
                                                 <% } %>
+                                                <div class="position-absolute top-0 start-100 translate-middle">
+                                                    <i class="bi bi-info-circle text-primary bg-white rounded-circle p-1 shadow-sm"></i>
+                                                </div>
                                             </div>
-                                            <h4 class="fw-bold mb-1"><%= item.first_name %> <%= item.last_name %></h4>
+                                            <h4 class="fw-bold mb-1 card-clickable" onclick="openDetailsModal('<%= item.id %>', 'user')">
+                                                <%= item.first_name %> <%= item.last_name %>
+                                                <i class="bi bi-info-circle ms-2 text-primary small"></i>
+                                            </h4>
                                             <div class="d-flex justify-content-center gap-3 text-muted small">
                                                 <span>
                                                     <i class="bi bi-geo-alt"></i>
@@ -111,6 +136,13 @@
                                             </p>
                                         </div>
                                     <% } %>
+                                    
+                                    <!-- Info Button -->
+                                    <div class="text-center mb-3">
+                                        <button class="btn btn-outline-info btn-sm" onclick="openDetailsModal('<%= item.id %>', '<%= swipeType === 'projects' ? 'project' : 'user' %>')">
+                                            <i class="bi bi-info-circle me-1"></i>View Details
+                                        </button>
+                                    </div>
                                     
                                     <!-- Action Buttons -->
                                     <div class="d-flex justify-content-center gap-4 mt-auto">
@@ -159,6 +191,10 @@
                             <i class="bi bi-heart-fill text-success me-2"></i>
                             <span>Like</span>
                         </div>
+                        <div class="d-flex align-items-center text-muted">
+                            <i class="bi bi-info-circle text-info me-2"></i>
+                            <span>Details</span>
+                        </div>
                     </div>
                     <small class="text-muted d-block mt-2">
                         You can also swipe left to pass or right to like
@@ -199,195 +235,415 @@
     </div>
 </div>
 
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalTitle">Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsModalBody">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
-.swipe-card {
-    cursor: grab;
-    transition: transform 0.3s ease;
-}
+    .swipe-card {
+        cursor: grab;
+        transition: transform 0.3s ease;
+    }
 
-.swipe-card:active {
-    cursor: grabbing;
-}
+    .swipe-card:active {
+        cursor: grabbing;
+    }
 
-.swipe-card.swiping {
-    transition: none;
-}
+    .swipe-card.swiping {
+        transition: none;
+    }
 
-.swipe-card.swiped-left {
-    transform: translateX(-100%) rotate(-30deg);
-    opacity: 0;
-}
+    .swipe-card.swiped-left {
+        transform: translateX(-100%) rotate(-30deg);
+        opacity: 0;
+    }
 
-.swipe-card.swiped-right {
-    transform: translateX(100%) rotate(30deg);
-    opacity: 0;
-}
+    .swipe-card.swiped-right {
+        transform: translateX(100%) rotate(30deg);
+        opacity: 0;
+    }
 
-.object-fit-cover {
-    object-fit: cover;
-}
+    .object-fit-cover {
+        object-fit: cover;
+    }
 
-#swipe-container {
-    perspective: 1000px;
-}
+    #swipe-container {
+        perspective: 1000px;
+    }
+
+    .card-clickable {
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+
+    .card-clickable:hover {
+        color: #0d6efd !important;
+    }
+
+    .profile-avatar.card-clickable:hover {
+        transform: scale(1.05);
+        transition: transform 0.2s ease;
+    }
 </style>
 
 <script>
-let currentCardIndex = 0;
-const cards = document.querySelectorAll('.swipe-card');
-let isAnimating = false;
+    let currentCardIndex = 0;
+    const cards = document.querySelectorAll('.swipe-card');
+    let isAnimating = false;
 
-function swipeAction(action, button) {
-    if (isAnimating || currentCardIndex >= cards.length) return;
-    
-    const currentCard = cards[currentCardIndex];
-    const targetId = currentCard.dataset.id;
-    const targetType = currentCard.dataset.type;
-    
-    isAnimating = true;
-    
-    // Animate card
-    currentCard.classList.add(action === 'like' ? 'swiped-right' : 'swiped-left');
-    
-    // Send swipe action to server
-    fetch('/match/swipe', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    function swipeAction(action, button) {
+        if (isAnimating || currentCardIndex >= cards.length) return;
+        
+        const currentCard = cards[currentCardIndex];
+        const targetId = currentCard.dataset.id;
+        const targetType = currentCard.dataset.type;
+        
+        isAnimating = true;
+        
+        // Animate card
+        currentCard.classList.add(action === 'like' ? 'swiped-right' : 'swiped-left');
+        
+        // Prepare swipe data
+        const swipeData = {
             targetId: targetId,
             action: action,
             targetType: targetType
+        };
+
+        // Add projectId if idealizer is swiping on collaborators
+        const projectId = currentCard.dataset.projectId;
+        if (projectId) {
+            swipeData.projectId = projectId;
+        }
+        
+        // Send swipe action to server
+        fetch('/match/swipe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(swipeData)
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.matchCreated) {
-            // Show match modal
-            const matchModal = new bootstrap.Modal(document.getElementById('matchModal'));
-            matchModal.show();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-    
-    // Move to next card
-    setTimeout(() => {
-        currentCard.style.display = 'none';
-        currentCardIndex++;
-        isAnimating = false;
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.matchCreated) {
+                // Show match modal
+                const matchModal = new bootstrap.Modal(document.getElementById('matchModal'));
+                matchModal.show();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
         
-        // Update z-index of remaining cards
-        for (let i = currentCardIndex; i < cards.length; i++) {
-            const card = cards[i];
-            const newIndex = i - currentCardIndex;
-            card.style.zIndex = cards.length - newIndex;
-            card.style.transform = `translateY(${newIndex * 5}px) scale(${1 - (newIndex * 0.02)})`;
-        }
+        // Move to next card
+        setTimeout(() => {
+            currentCard.style.display = 'none';
+            currentCardIndex++;
+            isAnimating = false;
+            
+            // Update z-index of remaining cards
+            for (let i = currentCardIndex; i < cards.length; i++) {
+                const card = cards[i];
+                const newIndex = i - currentCardIndex;
+                card.style.zIndex = cards.length - newIndex;
+                card.style.transform = `translateY(${newIndex * 5}px) scale(${1 - (newIndex * 0.02)})`;
+            }
+            
+            // Check if no more cards
+            if (currentCardIndex >= cards.length) {
+                document.getElementById('swipe-container').innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+                        <h3 class="text-muted">All done!</h3>
+                        <p class="text-muted">You've seen all available options. Check back later for more!</p>
+                        <a href="/dashboard" class="btn btn-primary">
+                            <i class="bi bi-house"></i> Back to Dashboard
+                        </a>
+                    </div>
+                `;
+            }
+        }, 300);
+    }
+
+    // Function to open details modal
+    function openDetailsModal(id, type) {
+        const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+        const modalTitle = document.getElementById('detailsModalTitle');
+        const modalBody = document.getElementById('detailsModalBody');
         
-        // Check if no more cards
-        if (currentCardIndex >= cards.length) {
-            document.getElementById('swipe-container').innerHTML = `
-                <div class="text-center py-5">
-                    <i class="bi bi-check-circle display-1 text-success mb-3"></i>
-                    <h3 class="text-muted">All done!</h3>
-                    <p class="text-muted">You've seen all available options. Check back later for more!</p>
-                    <a href="/dashboard" class="btn btn-primary">
-                        <i class="bi bi-house"></i> Back to Dashboard
-                    </a>
+        // Show loading
+        modalTitle.textContent = 'Loading...';
+        modalBody.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
-            `;
+            </div>
+        `;
+        
+        modal.show();
+        
+        // Fetch details
+        fetch(`/match/${type}/${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (type === 'project') {
+                    displayProjectDetails(data);
+                } else {
+                    displayUserDetails(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error loading details. Please try again.
+                    </div>
+                `;
+            });
+    }
+
+    function displayProjectDetails(data) {
+        const { project, skills } = data;
+        const modalTitle = document.getElementById('detailsModalTitle');
+        const modalBody = document.getElementById('detailsModalBody');
+        
+        modalTitle.textContent = project.title;
+        
+        const skillsByCategory = {};
+        if (skills) {
+            skills.forEach(skill => {
+                if (!skillsByCategory[skill.category]) {
+                    skillsByCategory[skill.category] = [];
+                }
+                skillsByCategory[skill.category].push(skill);
+            });
         }
-    }, 300);
-}
+        
+        modalBody.innerHTML = `
+            <div class="mb-4">
+                <h6 class="fw-bold text-primary">Description</h6>
+                <p>${project.description}</p>
+            </div>
+            
+            <div class="mb-4">
+                <h6 class="fw-bold text-primary">Objectives</h6>
+                <p>${project.objectives || 'No objectives specified'}</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-primary">Timeline</h6>
+                    <p><i class="bi bi-clock me-2"></i>${project.timeline}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-primary">Location</h6>
+                    <p><i class="bi bi-geo-alt me-2"></i>${project.location_preference}</p>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h6 class="fw-bold text-primary">Idealizer</h6>
+                <p><i class="bi bi-person me-2"></i>${project.first_name} ${project.last_name}</p>
+            </div>
+            
+            ${Object.keys(skillsByCategory).length > 0 ? `
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary">Required Skills</h6>
+                    ${Object.keys(skillsByCategory).map(category => `
+                        <div class="mb-3">
+                            <strong class="text-muted">${category}</strong>
+                            <div class="mt-2">
+                                ${skillsByCategory[category].map(skill => `
+                                    <span class="badge bg-light text-dark border me-2 mb-1">
+                                        ${skill.name} <small>(${skill.required_level})</small>
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+        `;
+    }
 
-// Touch/swipe support
-let startX = 0;
-let startY = 0;
-let currentX = 0;
-let currentY = 0;
-let isDragging = false;
+    function displayUserDetails(data) {
+        const { user, skills } = data;
+        const modalTitle = document.getElementById('detailsModalTitle');
+        const modalBody = document.getElementById('detailsModalBody');
+        
+        modalTitle.textContent = `${user.first_name} ${user.last_name}`;
+        
+        const skillsByCategory = {};
+        if (skills) {
+            skills.forEach(skill => {
+                if (!skillsByCategory[skill.category]) {
+                    skillsByCategory[skill.category] = [];
+                }
+                skillsByCategory[skill.category].push(skill);
+            });
+        }
+        
+        modalBody.innerHTML = `
+            <div class="text-center mb-4">
+                <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 100px; height: 100px; font-size: 2rem;">
+                    ${user.profile_picture ? 
+                        `<img src="${user.profile_picture}" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">` :
+                        `${user.first_name ? user.first_name.charAt(0) : user.email.charAt(0)}`
+                    }
+                </div>
+                <h4 class="fw-bold">${user.first_name} ${user.last_name}</h4>
+                <div class="d-flex justify-content-center gap-3 text-muted">
+                    <span><i class="bi bi-geo-alt me-1"></i>${user.location || 'Location not specified'}</span>
+                    <span><i class="bi bi-award me-1"></i>${user.experience_level ? user.experience_level.charAt(0).toUpperCase() + user.experience_level.slice(1) : 'Not specified'}</span>
+                </div>
+                ${user.availability ? `
+                    <span class="badge bg-success mt-2">
+                        <i class="bi bi-clock"></i> ${user.availability.charAt(0).toUpperCase() + user.availability.slice(1)}
+                    </span>
+                ` : ''}
+            </div>
+            
+            ${user.bio ? `
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary">About</h6>
+                    <p>${user.bio}</p>
+                </div>
+            ` : ''}
+            
+            ${Object.keys(skillsByCategory).length > 0 ? `
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary">Skills</h6>
+                    ${Object.keys(skillsByCategory).map(category => `
+                        <div class="mb-3">
+                            <strong class="text-muted">${category}</strong>
+                            <div class="mt-2">
+                                ${skillsByCategory[category].map(skill => `
+                                    <span class="badge bg-light text-dark border me-2 mb-1">
+                                        ${skill.name} <small>(${skill.proficiency_level})</small>
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            ${user.contact_info ? `
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary">Contact</h6>
+                    <p><i class="bi bi-envelope me-2"></i>${user.email}</p>
+                </div>
+            ` : ''}
+        `;
+    }
 
-document.addEventListener('touchstart', handleTouchStart, { passive: true });
-document.addEventListener('touchmove', handleTouchMove, { passive: true });
-document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    // Touch/swipe support (resto do código permanece igual)
+    let startX = 0;
+    let startY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let isDragging = false;
 
-document.addEventListener('mousedown', handleMouseDown);
-document.addEventListener('mousemove', handleMouseMove);
-document.addEventListener('mouseup', handleMouseEnd);
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-function handleTouchStart(e) {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    isDragging = true;
-}
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseEnd);
 
-function handleMouseDown(e) {
-    if (e.target.closest('.swipe-card')) {
-        startX = e.clientX;
-        startY = e.clientY;
+    function handleTouchStart(e) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
         isDragging = true;
     }
-}
 
-function handleTouchMove(e) {
-    if (!isDragging || currentCardIndex >= cards.length) return;
-    
-    currentX = e.touches[0].clientX;
-    currentY = e.touches[0].clientY;
-    
-    updateCardPosition();
-}
-
-function handleMouseMove(e) {
-    if (!isDragging || currentCardIndex >= cards.length) return;
-    
-    currentX = e.clientX;
-    currentY = e.clientY;
-    
-    updateCardPosition();
-}
-
-function updateCardPosition() {
-    const currentCard = cards[currentCardIndex];
-    const deltaX = currentX - startX;
-    const deltaY = currentY - startY;
-    
-    const rotation = deltaX * 0.1;
-    const opacity = Math.max(0.5, 1 - Math.abs(deltaX) / 300);
-    
-    currentCard.style.transform = `translateX(${deltaX}px) translateY(${deltaY}px) rotate(${rotation}deg)`;
-    currentCard.style.opacity = opacity;
-    currentCard.classList.add('swiping');
-}
-
-function handleTouchEnd(e) {
-    handleSwipeEnd();
-}
-
-function handleMouseEnd(e) {
-    handleSwipeEnd();
-}
-
-function handleSwipeEnd() {
-    if (!isDragging || currentCardIndex >= cards.length) return;
-    
-    const currentCard = cards[currentCardIndex];
-    const deltaX = currentX - startX;
-    
-    isDragging = false;
-    currentCard.classList.remove('swiping');
-    
-    if (Math.abs(deltaX) > 100) {
-        // Swipe detected
-        const action = deltaX > 0 ? 'like' : 'pass';
-        swipeAction(action);
-    } else {
-        // Snap back
-        currentCard.style.transform = '';
-        currentCard.style.opacity = '';
+    function handleMouseDown(e) {
+        if (e.target.closest('.swipe-card') && !e.target.closest('.card-clickable') && !e.target.closest('button')) {
+            startX = e.clientX;
+            startY = e.clientY;
+            isDragging = true;
+        }
     }
-}
+
+    function handleTouchMove(e) {
+        if (!isDragging || currentCardIndex >= cards.length) return;
+        
+        currentX = e.touches[0].clientX;
+        currentY = e.touches[0].clientY;
+        
+        updateCardPosition();
+    }
+
+    function handleMouseMove(e) {
+        if (!isDragging || currentCardIndex >= cards.length) return;
+        
+        currentX = e.clientX;
+        currentY = e.clientY;
+        
+        updateCardPosition();
+    }
+
+    function updateCardPosition() {
+        const currentCard = cards[currentCardIndex];
+        const deltaX = currentX - startX;
+        const deltaY = currentY - startY;
+        
+        const rotation = deltaX * 0.1;
+        const opacity = Math.max(0.5, 1 - Math.abs(deltaX) / 300);
+        
+        currentCard.style.transform = `translateX(${deltaX}px) translateY(${deltaY}px) rotate(${rotation}deg)`;
+        currentCard.style.opacity = opacity;
+        currentCard.classList.add('swiping');
+    }
+
+    function handleTouchEnd(e) {
+        handleSwipeEnd();
+    }
+
+    function handleMouseEnd(e) {
+        handleSwipeEnd();
+    }
+
+    function handleSwipeEnd() {
+        if (!isDragging || currentCardIndex >= cards.length) return;
+        
+        const currentCard = cards[currentCardIndex];
+        const deltaX = currentX - startX;
+        
+        isDragging = false;
+        currentCard.classList.remove('swiping');
+        
+        if (Math.abs(deltaX) > 100) {
+            // Swipe detected
+            const action = deltaX > 0 ? 'like' : 'pass';
+            swipeAction(action);
+        } else {
+            // Snap back
+            currentCard.style.transform = '';
+            currentCard.style.opacity = '';
+        }
+    }
 </script>

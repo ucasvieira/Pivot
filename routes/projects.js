@@ -10,9 +10,24 @@ const Skill = require('../models/Skill');
 router.get('/', ensureAuthenticated, ensureProfileComplete, async (req, res) => {
   try {
     const projects = await Project.getAll(req.user.id);
+    
+    // Se for colaborador, verificar quais projetos já têm interesse registrado
+    let projectInterests = {};
+    if (req.user.user_type === 'collaborator') {
+      const SwipeHistory = require('../models/SwipeHistory');
+      for (const project of projects) {
+        projectInterests[project.id] = await SwipeHistory.hasUserSwipedTarget(
+          req.user.id, 
+          project.id, 
+          'project'
+        );
+      }
+    }
+
     res.render('projects/list', {
       title: 'All Projects',
-      projects
+      projects,
+      projectInterests
     });
   } catch (error) {
     console.error('Projects list error:', error);
@@ -111,12 +126,24 @@ router.get('/view/:id', ensureAuthenticated, ensureProfileComplete, async (req, 
     }
 
     const projectSkills = await Skill.getProjectSkills(project.id);
+    
+    // Verificar se o colaborador já demonstrou interesse neste projeto
+    let hasAlreadyShownInterest = false;
+    if (req.user.user_type === 'collaborator') {
+      const SwipeHistory = require('../models/SwipeHistory');
+      hasAlreadyShownInterest = await SwipeHistory.hasUserSwipedTarget(
+        req.user.id, 
+        project.id, 
+        'project'
+      );
+    }
 
     res.render('projects/view', {
       title: project.title,
       project,
       projectSkills,
-      isOwner: project.idealizer_id == req.user.id
+      isOwner: project.idealizer_id == req.user.id,
+      hasAlreadyShownInterest
     });
   } catch (error) {
     console.error('Project view error:', error);

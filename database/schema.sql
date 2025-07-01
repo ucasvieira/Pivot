@@ -1,4 +1,3 @@
-
 -- Drop tables in reverse order of dependencies
 DROP TABLE IF EXISTS swipe_history;
 DROP TABLE IF EXISTS messages;
@@ -131,16 +130,18 @@ CREATE TABLE messages (
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Swipe history table
+-- Swipe history table (CORRIGIDA)
 CREATE TABLE swipe_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
     target_id INT NOT NULL,
     target_type ENUM('project', 'user') NOT NULL,
+    project_context_id INT NULL,
     action ENUM('like', 'pass') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_swipe (user_id, target_id, target_type),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    UNIQUE KEY unique_swipe_with_context (user_id, target_id, target_type, project_context_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_context_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
 -- Insert default skills

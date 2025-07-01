@@ -134,6 +134,24 @@ class User {
     return result.rows;
   }
 
+  static async getCollaboratorsForMatching(idealizerId, projectId) {
+    const query = `
+      SELECT DISTINCT u.*, up.first_name, up.last_name, up.bio, up.location,
+             up.experience_level, up.profile_picture
+      FROM users u
+      JOIN user_profiles up ON u.id = up.user_id
+      LEFT JOIN swipe_history sh ON (sh.user_id = ? AND sh.target_id = u.id AND sh.target_type = 'user' AND sh.project_context_id = ?)
+      WHERE u.user_type = 'collaborator'
+      AND u.is_profile_complete = true
+      AND u.id != ?
+      AND sh.id IS NULL
+      ORDER BY u.created_at DESC
+    `;
+  
+    const result = await db.query(query, [idealizerId, projectId, idealizerId]);
+    return result.rows;
+  }
+
 
   static async updateUserType(userId, userType) {
     try {

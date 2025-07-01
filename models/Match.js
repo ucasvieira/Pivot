@@ -21,6 +21,56 @@ class Match {
     return { id: result.insertId, ...matchData, collaborator_interested: false, idealizer_interested: false, status: 'pending' };
   }
 
+  // Novo método para verificar interesse mútuo e criar match
+  static async checkAndCreateMatch(projectId, collaboratorId, idealizerId) {
+    const SwipeHistory = require('./SwipeHistory');
+    
+    try {
+      // Verificar se colaborador deu like no projeto
+      const collaboratorLikedProject = await SwipeHistory.getSwipeAction(collaboratorId, projectId, 'project');
+      
+      // Verificar se idealizador deu like no colaborador (através do projeto)
+      const idealizerLikedCollaborator = await SwipeHistory.getSwipeAction(idealizerId, collaboratorId, 'user', projectId);
+      
+      console.log('Verificando match:', {
+        projectId,
+        collaboratorId,
+        idealizerId,
+        collaboratorLikedProject,
+        idealizerLikedCollaborator
+      });
+
+      // Se ambos deram like, criar ou atualizar match
+      if (collaboratorLikedProject === 'like' && idealizerLikedCollaborator === 'like') {
+        // Verificar se já existe um match para evitar duplicatas
+        const existingMatch = await this.findByUserAndProject(collaboratorId, projectId);
+        
+        let match;
+        if (existingMatch) {
+          match = existingMatch;
+        } else {
+          match = await this.create({ 
+            project_id: projectId, 
+            collaborator_id: collaboratorId, 
+            idealizer_id: idealizerId 
+          });
+        }
+        
+        // Marcar ambos como interessados
+        await this.updateInterest(match.id, 'collaborator', true);
+        await this.updateInterest(match.id, 'idealizer', true);
+        
+        console.log('Match criado/atualizado:', match.id);
+        return { match, isNewMatch: !existingMatch };
+      }
+      
+      return { match: null, isNewMatch: false };
+    } catch (error) {
+      console.error('Erro ao verificar/criar match:', error);
+      throw error;
+    }
+  }
+
   static async findById(id) {
     const query = `
       SELECT m.*, p.title as project_title, p.description as project_description,
@@ -169,12 +219,52 @@ class Match {
       LEFT JOIN user_profiles up2 ON u2.id = up2.user_id
       LEFT JOIN conversations c ON c.match_id = m.id
       WHERE (m.collaborator_id = ? OR m.idealizer_id = ?) 
-        AND m.status = 'accepted'
+      AND m.status = 'accepted'
       ORDER BY m.created_at DESC
     `;
 
     const result = await db.query(query, [userId, userId]);
     return result.rows;
+  }
+
+  // Método para buscar matches pendentes (onde apenas um lado manifestou interesse)
+  static async getPendingMatches(userId, userType) {
+    const isCollaborator = userType === 'collaborator';
+    const userIdField = isCollaborator ? 'collaborator_id' : 'idealizer_id';
+    const otherUserIdField = isCollaborator ? 'idealizer_id' : 'collaborator_id';
+    const userInterestedField = isCollaborator ? 'collaborator_interested' : 'idealizer_interested';
+
+    const query = `
+      SELECT m.*, p.title as project_title, p.description as project_description,
+             u.email as other_user_email, up.first_name as other_user_first_name,
+             up.last_name as other_user_last_name, up.profile_picture as other_user_picture
+      FROM matches m
+      JOIN projects p ON m.project_id = p.id
+      JOIN users u ON m.${otherUserIdField} = u.id
+      LEFT JOIN user_profiles up ON u.id = up.user_id
+      WHERE m.${userIdField} = ?
+      AND m.status = 'pending'
+      AND m.${userInterestedField} = false
+      ORDER BY m.created_at DESC
+    `;
+
+    const result = await db.query(query, [userId]);
+    return result.rows;
+  }
+
+  // Método para contar matches por status
+  static async getMatchStats(userId) {
+    const query = `
+      SELECT 
+        COUNT(*) as total_matches,
+        SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted_matches,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_matches
+      FROM matches 
+      WHERE collaborator_id = ? OR idealizer_id = ?
+    `;
+
+    const result = await db.query(query, [userId, userId]);
+    return result.rows[0];
   }
 }
 

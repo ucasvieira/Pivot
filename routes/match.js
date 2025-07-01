@@ -8,31 +8,75 @@ const Match = require('../models/Match');
 const SwipeHistory = require('../models/SwipeHistory');
 const Skill = require('../models/Skill');
 
-// Swipe interface for collaborators
+// Página de seleção de projeto para idealizadores
+router.get('/select-project', ensureAuthenticated, ensureProfileComplete, async (req, res) => {
+  try {
+    // Apenas idealizadores podem acessar
+    if (req.user.user_type !== 'idealizer') {
+      return res.redirect('/match/swipe');
+    }
+
+    const projects = await Project.findByIdealizerId(req.user.id);
+    const activeProjects = projects.filter(p => p.status === 'active');
+
+    if (activeProjects.length === 0) {
+      req.flash('error', 'Você precisa ter pelo menos um projeto ativo para descobrir colaboradores.');
+      return res.redirect('/projects');
+    }
+
+    res.render('match/select-project', {
+      title: 'Escolha um Projeto',
+      projects: activeProjects
+    });
+  } catch (error) {
+    console.error('Project selection error:', error);
+    req.flash('error', 'Erro ao carregar projetos');
+    res.redirect('/dashboard');
+  }
+});
+
+// Swipe interface
 router.get('/swipe', ensureAuthenticated, ensureProfileComplete, async (req, res) => {
   try {
     let items = [];
     let swipeType = 'projects';
+    let selectedProject = null;
 
     if (req.user.user_type === 'collaborator') {
-      // Show projects to collaborators
+      // Colaboradores veem projetos
       items = await Project.getProjectsForMatching(req.user.id);
       swipeType = 'projects';
     } else {
-      // Show collaborators to idealizers
-      items = await User.getAllCollaborators(req.user.id);
+      // Idealizadores precisam selecionar um projeto primeiro
+      const projectId = req.query.project_id;
+      
+      if (!projectId) {
+        return res.redirect('/match/select-project');
+      }
+
+      // Verificar se o projeto pertence ao usuário
+      const project = await Project.findById(projectId);
+      if (!project || project.idealizer_id !== req.user.id) {
+        req.flash('error', 'Projeto não encontrado ou não autorizado');
+        return res.redirect('/match/select-project');
+      }
+
+      // Buscar colaboradores não vistos para este projeto
+      items = await User.getCollaboratorsForMatching(req.user.id, projectId);
       swipeType = 'collaborators';
+      selectedProject = project;
     }
 
     res.render('match/swipe', {
-      title: 'Discover Matches',
+      title: 'Descobrir',
       items,
       swipeType,
-      userType: req.user.user_type
+      userType: req.user.user_type,
+      selectedProject
     });
   } catch (error) {
     console.error('Swipe page error:', error);
-    req.flash('error', 'Error loading matches');
+    req.flash('error', 'Erro ao carregar');
     res.redirect('/dashboard');
   }
 });
@@ -40,56 +84,52 @@ router.get('/swipe', ensureAuthenticated, ensureProfileComplete, async (req, res
 // Handle swipe action
 router.post('/swipe', ensureAuthenticated, ensureProfileComplete, async (req, res) => {
   try {
-    const { targetId, action, targetType } = req.body;
+    const { targetId, action, targetType, projectId } = req.body;
 
     if (!['like', 'pass'].includes(action) || !['project', 'user'].includes(targetType)) {
-      return res.status(400).json({ error: 'Invalid action or target type' });
+      return res.status(400).json({ error: 'Ação ou tipo de alvo inválido' });
     }
 
-    // Record swipe history
+    // Para idealizadores, projectId é obrigatório quando fazem swipe em usuários
+    if (req.user.user_type === 'idealizer' && targetType === 'user' && !projectId) {
+      return res.status(400).json({ error: 'ID do projeto é obrigatório' });
+    }
+
+    // Registrar histórico de swipe
     await SwipeHistory.create({
       user_id: req.user.id,
       target_id: parseInt(targetId),
       target_type: targetType,
-      action
+      action,
+      project_context_id: projectId ? parseInt(projectId) : null
     });
 
-    // If it's a like, check for potential matches
-    if (action === 'like') {
-      let matchCreated = false;
+    let matchResult = { matchCreated: false, message: action === 'like' ? 'Interesse registrado!' : 'Passou' };
 
+    // Se foi like, verificar possível match
+    if (action === 'like') {
       if (req.user.user_type === 'collaborator' && targetType === 'project') {
-        // Collaborator liked a project
+        // Colaborador deu like em projeto
         const project = await Project.findById(targetId);
         if (project) {
-          const match = await Match.create({
-            project_id: project.id,
-            collaborator_id: req.user.id,
-            idealizer_id: project.idealizer_id
-          });
-          
-          if (match) {
-            await Match.updateInterest(match.id, 'collaborator', true);
-            matchCreated = true;
+          const result = await Match.checkAndCreateMatch(project.id, req.user.id, project.idealizer_id);
+          if (result.isNewMatch) {
+            matchResult = { matchCreated: true, message: 'É um match! 🎉' };
           }
         }
       } else if (req.user.user_type === 'idealizer' && targetType === 'user') {
-        // Idealizer liked a collaborator - need to check if there are mutual interests
-        // This would require more complex logic based on projects
-        // For now, we'll just record the interest
+        // Idealizador deu like em colaborador através de um projeto
+        const result = await Match.checkAndCreateMatch(parseInt(projectId), parseInt(targetId), req.user.id);
+        if (result.isNewMatch) {
+          matchResult = { matchCreated: true, message: 'É um match! 🎉' };
+        }
       }
-
-      res.json({ 
-        success: true, 
-        matchCreated,
-        message: matchCreated ? 'It\'s a match!' : 'Interest recorded'
-      });
-    } else {
-      res.json({ success: true, message: 'Passed' });
     }
+
+    res.json({ success: true, ...matchResult });
   } catch (error) {
     console.error('Swipe action error:', error);
-    res.status(500).json({ error: 'Error processing swipe' });
+    res.status(500).json({ error: 'Erro ao processar ação' });
   }
 });
 
