@@ -1,73 +1,73 @@
 <div class="container py-5">
-    <div class="row justify-content-center">
+  <div class="row justify-content-center">
       <div class="col-lg-6 col-md-8">
-        <div class="card border-0 shadow">
-          <div class="card-body p-5">
-            <div class="text-center mb-4">
-              <h1 class="h3 fw-bold">Bem-vindo ao Pivot!</h1>
-              <p class="text-muted">Como você gostaria de participar?</p>
-            </div>
-  
-            <form action="/auth/choose-type" method="POST">
-              <div class="mb-4">
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <div class="card h-100">
-                      <div class="card-body text-center p-3">
-                        <input type="radio" class="btn-check" name="user_type" id="idealizer" value="idealizer" required>
-                        <label class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center" for="idealizer">
-                          <i class="bi bi-lightbulb-fill display-6 mb-2"></i>
-                          <strong>Idealizer</strong>
-                          <small class="text-muted">Tenho ideias de projetos</small>
-                        </label>
-                      </div>
-                    </div>
+          <div class="card border-0 shadow">
+              <div class="card-body p-5">
+                  <div class="text-center mb-4">
+                      <h1 class="h3 fw-bold">Bem-vindo ao Pivot!</h1>
+                      <p class="text-muted">Como você gostaria de participar?</p>
                   </div>
-                  <div class="col-md-6">
-                    <div class="card h-100">
-                      <div class="card-body text-center p-3">
-                        <input type="radio" class="btn-check" name="user_type" id="collaborator" value="collaborator" required>
-                        <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center" for="collaborator">
-                          <i class="bi bi-tools display-6 mb-2"></i>
-                          <strong>Collaborator</strong>
-                          <small class="text-muted">Tenho habilidades para oferecer</small>
-                        </label>
+
+                  <form action="/auth/choose-type" method="POST">
+                      <div class="mb-4">
+                          <div class="row g-3">
+                              <div class="col-md-6">
+                                  <div class="card h-100">
+                                      <div class="card-body text-center p-3">
+                                          <input type="radio" class="btn-check" name="user_type" id="idealizer" value="idealizer" required>
+                                          <label class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center" for="idealizer">
+                                              <i class="bi bi-lightbulb-fill display-6 mb-2"></i>
+                                              <strong>Idealizador</strong>
+                                              <small class="text-muted">Tenho ideias de projetos</small>
+                                          </label>
+                                      </div>
+                                  </div>
+                              </div>
+                              <div class="col-md-6">
+                                  <div class="card h-100">
+                                      <div class="card-body text-center p-3">
+                                          <input type="radio" class="btn-check" name="user_type" id="collaborator" value="collaborator" required>
+                                          <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center" for="collaborator">
+                                              <i class="bi bi-tools display-6 mb-2"></i>
+                                              <strong>Colaborador</strong>
+                                              <small class="text-muted">Tenho habilidades para oferecer</small>
+                                          </label>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
+
+                      <div class="d-grid">
+                          <button type="submit" class="btn btn-primary btn-lg">
+                              <i class="bi bi-arrow-right"></i> Continuar
+                          </button>
+                      </div>
+                  </form>
               </div>
-  
-              <div class="d-grid">
-                <button type="submit" class="btn btn-primary btn-lg">
-                  <i class="bi bi-arrow-right"></i> Continuar
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
       </div>
-    </div>
   </div>
-  
-  <style>
+</div>
+
+<style>
   .btn-check:checked + .btn-outline-warning {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #000;
+      background-color: #ffc107;
+      border-color: #ffc107;
+      color: #000;
   }
-  
+
   .btn-check:checked + .btn-outline-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+      color: #fff;
   }
-  
+
   .card {
-    transition: transform 0.2s ease;
+      transition: transform 0.2s ease;
   }
-  
+
   .card:hover {
-    transform: translateY(-2px);
+      transform: translateY(-2px);
   }
 </style>

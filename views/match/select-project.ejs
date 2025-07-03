@@ -8,68 +8,68 @@
                 </div>
                 <div class="card-body">
                     <% if (projects && projects.length > 0) { %>
-                        <div class="row">
-                            <% projects.forEach(project => { %>
-                                <div class="col-md-6 col-lg-4 mb-4">
-                                    <div class="card h-100 border-0 shadow-sm">
-                                        <div class="card-body d-flex flex-column">
-                                            <h5 class="card-title fw-bold"><%= project.title %></h5>
-                                            <p class="card-text text-muted flex-grow-1">
-                                                <%= project.description && project.description.length > 100 ? project.description.substring(0, 100) + '...' : project.description || 'Sem descrição' %>
-                                            </p>
-                                            
-                                            <div class="mb-3">
-                                                <div class="d-flex align-items-center mb-2">
-                                                    <i class="bi bi-calendar text-primary me-2"></i>
-                                                    <small class="text-muted"><%= project.timeline || 'Timeline não especificado' %></small>
-                                                </div>
-                                                
-                                                <% if (project.location_preference) { %>
-                                                    <div class="d-flex align-items-center mb-2">
-                                                        <i class="bi bi-geo-alt text-primary me-2"></i>
-                                                        <small class="text-muted"><%= project.location_preference %></small>
-                                                    </div>
-                                                <% } %>
-                                                
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-flag text-primary me-2"></i>
-                                                    <span class="badge bg-success"><%= project.status || 'active' %></span>
-                                                </div>
-                                            </div>
+                    <div class="row">
+                        <% projects.forEach(project => { %>
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title fw-bold"><%= project.title %></h5>
+                                    <p class="card-text text-muted flex-grow-1">
+                                        <%= project.description && project.description.length > 100 ? project.description.substring(0, 100) + '...' : project.description || 'Sem descrição' %>
+                                    </p>
+                                    
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi bi-calendar text-primary me-2"></i>
+                                            <small class="text-muted"><%= project.timeline || 'Timeline não especificado' %></small>
                                         </div>
-                                        <div class="card-footer bg-transparent border-0 pt-0">
-                                            <a href="/match/swipe?project_id=<%= project.id %>" class="btn btn-primary w-100">
-                                                <i class="bi bi-arrow-right me-2"></i>Usar este Projeto
-                                            </a>
+                                        
+                                        <% if (project.location_preference) { %>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi bi-geo-alt text-primary me-2"></i>
+                                            <small class="text-muted"><%= project.location_preference %></small>
+                                        </div>
+                                        <% } %>
+                                        
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-flag text-primary me-2"></i>
+                                            <span class="badge bg-success"><%= project.status || 'ativo' %></span>
                                         </div>
                                     </div>
                                 </div>
-                            <% }); %>
+                                <div class="card-footer bg-transparent border-0 pt-0">
+                                    <a href="/match/swipe?project_id=<%= project.id %>" class="btn btn-primary w-100">
+                                        <i class="bi bi-arrow-right me-2"></i>Usar este Projeto
+                                    </a>
+                                </div>
+                            </div>
                         </div>
+                        <% }); %>
+                    </div>
                     <% } else { %>
-                        <div class="text-center py-5">
-                            <i class="bi bi-folder-x display-1 text-muted mb-3"></i>
-                            <h3 class="text-muted">Nenhum projeto encontrado</h3>
-                            <p class="text-muted mb-4">Você precisa ter pelo menos um projeto ativo para descobrir colaboradores.</p>
-                            <a href="/projects/create" class="btn btn-primary">
-                                <i class="bi bi-plus-circle me-2"></i>Criar Primeiro Projeto
-                            </a>
-                        </div>
+                    <div class="text-center py-5">
+                        <i class="bi bi-folder-x display-1 text-muted mb-3"></i>
+                        <h3 class="text-muted">Nenhum projeto encontrado</h3>
+                        <p class="text-muted mb-4">Você precisa ter pelo menos um projeto ativo para descobrir colaboradores.</p>
+                        <a href="/projects/create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Criar Primeiro Projeto
+                        </a>
+                    </div>
                     <% } %>
                 </div>
                 
                 <% if (projects && projects.length > 0) { %>
-                    <div class="card-footer bg-light">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Você encontrará colaboradores relevantes para o projeto selecionado
-                            </small>
-                            <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-arrow-left me-1"></i>Voltar
-                            </a>
-                        </div>
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Você encontrará colaboradores relevantes para o projeto selecionado
+                        </small>
+                        <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Voltar
+                        </a>
                     </div>
+                </div>
                 <% } %>
             </div>
         </div>

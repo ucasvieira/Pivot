@@ -1,211 +1,211 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-6">
-            <!-- Project Context Info for Idealizers -->
+            <!-- Informações de Contexto do Projeto para Idealizadores -->
             <% if (selectedProject) { %>
-                <div class="alert alert-info mb-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong><i class="bi bi-lightbulb me-2"></i>Descobrindo colaboradores para:</strong>
-                            <div class="mt-1">
-                                <span class="fw-bold"><%= selectedProject.title %></span>
-                            </div>
+            <div class="alert alert-info mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong><i class="bi bi-lightbulb me-2"></i>Descobrindo colaboradores para:</strong>
+                        <div class="mt-1">
+                            <span class="fw-bold"><%= selectedProject.title %></span>
                         </div>
-                        <a href="/match/select-project" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-arrow-repeat me-1"></i>Trocar Projeto
-                        </a>
                     </div>
+                    <a href="/match/select-project" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-repeat me-1"></i>Trocar Projeto
+                    </a>
                 </div>
+            </div>
             <% } %>
 
             <div class="text-center mb-4">
-                <h1 class="h3 fw-bold">Discover 
-                    <% if (swipeType === 'projects') { %>
-                        Projects
-                    <% } else { %>
-                        Collaborators
-                    <% } %>
+                <h1 class="h3 fw-bold">Descobrir 
+                <% if (swipeType === 'projects') { %>
+                Projetos
+                <% } else { %>
+                Colaboradores
+                <% } %>
                 </h1>
                 <p class="text-muted">
-                    <% if (swipeType === 'projects') { %>
-                        Swipe right on projects you're interested in
-                    <% } else { %>
-                        Swipe right on collaborators you'd like to work with
-                    <% } %>
+                <% if (swipeType === 'projects') { %>
+                Deslize para a direita nos projetos que você está interessado
+                <% } else { %>
+                Deslize para a direita nos colaboradores com quem você gostaria de trabalhar
+                <% } %>
                 </p>
             </div>
 
             <div id="swipe-container" class="position-relative" style="height: 600px;">
                 <% if (items && items.length > 0) { %>
-                    <% items.forEach(function(item, index) { %>
-                        <div class="swipe-card position-absolute w-100" 
-                             data-id="<%= item.id %>"
-                             data-type="<%= swipeType === 'projects' ? 'project' : 'user' %>"
-                             <% if (selectedProject) { %>data-project-id="<%= selectedProject.id %>"<% } %>
-                             style="z-index: <%= items.length - index %>; transform: translateY(<%= index * 5 %>px) scale(<%= 1 - (index * 0.02) %>);">
+                <% items.forEach(function(item, index) { %>
+                <div class="swipe-card position-absolute w-100" 
+                    data-id="<%= item.id %>"
+                    data-type="<%= swipeType === 'projects' ? 'project' : 'user' %>"
+                    <% if (selectedProject) { %>data-project-id="<%= selectedProject.id %>"<% } %>
+                    style="z-index: <%= items.length - index %>; transform: translateY(<%= index * 5 %>px) scale(<%= 1 - (index * 0.02) %>);">
+                    
+                    <div class="card border-0 shadow-lg h-100">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <% if (swipeType === 'projects') { %>
+                            <!-- Cartão de Projeto -->
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h4 class="fw-bold mb-0 card-clickable" onclick="openDetailsModal('<%= item.id %>', 'project')">
+                                    <%= item.title %>
+                                    <i class="bi bi-info-circle ms-2 text-primary small"></i>
+                                </h4>
+                                <span class="badge bg-success">Ativo</span>
+                            </div>
                             
-                            <div class="card border-0 shadow-lg h-100">
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <% if (swipeType === 'projects') { %>
-                                        <!-- Project Card -->
-                                        <div class="d-flex justify-content-between align-items-start mb-3">
-                                            <h4 class="fw-bold mb-0 card-clickable" onclick="openDetailsModal('<%= item.id %>', 'project')">
-                                                <%= item.title %>
-                                                <i class="bi bi-info-circle ms-2 text-primary small"></i>
-                                            </h4>
-                                            <span class="badge bg-success">Active</span>
-                                        </div>
-                                        
-                                        <p class="text-muted mb-3 flex-grow-1">
-                                            <%= item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description %>
-                                        </p>
-                                        
-                                        <div class="row g-2 mb-3">
-                                            <div class="col-6">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-person me-1"></i>
-                                                    <%= item.first_name %> <%= item.last_name %>
-                                                </small>
-                                            </div>
-                                            <div class="col-6">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-geo-alt me-1"></i>
-                                                    <%= item.idealizer_location || item.location_preference || 'Remote' %>
-                                                </small>
-                                            </div>
-                                            <div class="col-6">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-clock me-1"></i>
-                                                    <%= item.timeline %>
-                                                </small>
-                                            </div>
-                                            <div class="col-6">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-calendar me-1"></i>
-                                                    <%= new Date(item.created_at).toLocaleDateString() %>
-                                                </small>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <h6 class="fw-bold mb-2">Objectives:</h6>
-                                            <p class="small text-muted mb-0">
-                                                <%= item.objectives ? (item.objectives.length > 150 ? item.objectives.substring(0, 150) + '...' : item.objectives) : 'No objectives specified' %>
-                                            </p>
-                                        </div>
-                                    <% } else { %>
-                                        <!-- Collaborator Card -->
-                                        <div class="text-center mb-3">
-                                            <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3 card-clickable" 
-                                                 onclick="openDetailsModal('<%= item.id %>', 'user')"
-                                                 style="width: 80px; height: 80px; font-size: 1.5rem; cursor: pointer;">
-                                                <% if (item.profile_picture) { %>
-                                                    <img src="<%= item.profile_picture %>" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">
-                                                <% } else { %>
-                                                    <%= item.first_name ? item.first_name.charAt(0) : item.email.charAt(0) %>
-                                                <% } %>
-                                                <div class="position-absolute top-0 start-100 translate-middle">
-                                                    <i class="bi bi-info-circle text-primary bg-white rounded-circle p-1 shadow-sm"></i>
-                                                </div>
-                                            </div>
-                                            <h4 class="fw-bold mb-1 card-clickable" onclick="openDetailsModal('<%= item.id %>', 'user')">
-                                                <%= item.first_name %> <%= item.last_name %>
-                                                <i class="bi bi-info-circle ms-2 text-primary small"></i>
-                                            </h4>
-                                            <div class="d-flex justify-content-center gap-3 text-muted small">
-                                                <span>
-                                                    <i class="bi bi-geo-alt"></i>
-                                                    <%= item.location || 'Location not specified' %>
-                                                </span>
-                                                <span>
-                                                    <i class="bi bi-award"></i>
-                                                    <%= item.experience_level ? item.experience_level.charAt(0).toUpperCase() + item.experience_level.slice(1) : 'Not specified' %>
-                                                </span>
-                                            </div>
-                                            <% if (item.availability) { %>
-                                                <span class="badge bg-success mt-2">
-                                                    <i class="bi bi-clock"></i> <%= item.availability.charAt(0).toUpperCase() + item.availability.slice(1) %>
-                                                </span>
-                                            <% } %>
-                                        </div>
-                                        
-                                        <div class="mb-3 flex-grow-1">
-                                            <h6 class="fw-bold mb-2">About:</h6>
-                                            <p class="small text-muted">
-                                                <%= item.bio ? (item.bio.length > 200 ? item.bio.substring(0, 200) + '...' : item.bio) : 'No bio available' %>
-                                            </p>
-                                        </div>
-                                    <% } %>
-                                    
-                                    <!-- Info Button -->
-                                    <div class="text-center mb-3">
-                                        <button class="btn btn-outline-info btn-sm" onclick="openDetailsModal('<%= item.id %>', '<%= swipeType === 'projects' ? 'project' : 'user' %>')">
-                                            <i class="bi bi-info-circle me-1"></i>View Details
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Action Buttons -->
-                                    <div class="d-flex justify-content-center gap-4 mt-auto">
-                                        <button class="btn btn-outline-danger btn-lg rounded-circle pass-btn" 
-                                                style="width: 60px; height: 60px;" 
-                                                onclick="swipeAction('pass', this)">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                        <button class="btn btn-success btn-lg rounded-circle like-btn" 
-                                                style="width: 60px; height: 60px;" 
-                                                onclick="swipeAction('like', this)">
-                                            <i class="bi bi-heart-fill"></i>
-                                        </button>
-                                    </div>
+                            <p class="text-muted mb-3 flex-grow-1">
+                                <%= item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description %>
+                            </p>
+                            
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">
+                                        <i class="bi bi-person me-1"></i>
+                                        <%= item.first_name %> <%= item.last_name %>
+                                    </small>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        <%= item.idealizer_location || item.location_preference || 'Remoto' %>
+                                    </small>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>
+                                        <%= item.timeline %>
+                                    </small>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        <%= new Date(item.created_at).toLocaleDateString() %>
+                                    </small>
                                 </div>
                             </div>
-                        </div>
-                    <% }); %>
-                <% } else { %>
-                    <div class="text-center py-5">
-                        <i class="bi bi-heart-break display-1 text-muted mb-3"></i>
-                        <h3 class="text-muted">No more 
-                            <% if (swipeType === 'projects') { %>
-                                projects
+                            
+                            <div class="mb-3">
+                                <h6 class="fw-bold mb-2">Objetivos:</h6>
+                                <p class="small text-muted mb-0">
+                                    <%= item.objectives ? (item.objectives.length > 150 ? item.objectives.substring(0, 150) + '...' : item.objectives) : 'Nenhum objetivo especificado' %>
+                                </p>
+                            </div>
                             <% } else { %>
-                                collaborators
+                            <!-- Cartão de Colaborador -->
+                            <div class="text-center mb-3">
+                                <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3 card-clickable" 
+                                    onclick="openDetailsModal('<%= item.id %>', 'user')"
+                                    style="width: 80px; height: 80px; font-size: 1.5rem; cursor: pointer;">
+                                    <% if (item.profile_picture) { %>
+                                    <img src="<%= item.profile_picture %>" alt="Perfil" class="rounded-circle w-100 h-100 object-fit-cover">
+                                    <% } else { %>
+                                    <%= item.first_name ? item.first_name.charAt(0) : item.email.charAt(0) %>
+                                    <% } %>
+                                    <div class="position-absolute top-0 start-100 translate-middle">
+                                        <i class="bi bi-info-circle text-primary bg-white rounded-circle p-1 shadow-sm"></i>
+                                    </div>
+                                </div>
+                                <h4 class="fw-bold mb-1 card-clickable" onclick="openDetailsModal('<%= item.id %>', 'user')">
+                                    <%= item.first_name %> <%= item.last_name %>
+                                    <i class="bi bi-info-circle ms-2 text-primary small"></i>
+                                </h4>
+                                <div class="d-flex justify-content-center gap-3 text-muted small">
+                                    <span>
+                                        <i class="bi bi-geo-alt"></i>
+                                        <%= item.location || 'Localização não especificada' %>
+                                    </span>
+                                    <span>
+                                        <i class="bi bi-award"></i>
+                                        <%= item.experience_level ? item.experience_level.charAt(0).toUpperCase() + item.experience_level.slice(1) : 'Não especificado' %>
+                                    </span>
+                                </div>
+                                <% if (item.availability) { %>
+                                <span class="badge bg-success mt-2">
+                                    <i class="bi bi-clock"></i> <%= item.availability.charAt(0).toUpperCase() + item.availability.slice(1) %>
+                                </span>
+                                <% } %>
+                            </div>
+                            
+                            <div class="mb-3 flex-grow-1">
+                                <h6 class="fw-bold mb-2">Sobre:</h6>
+                                <p class="small text-muted">
+                                    <%= item.bio ? (item.bio.length > 200 ? item.bio.substring(0, 200) + '...' : item.bio) : 'Nenhuma biografia disponível' %>
+                                </p>
+                            </div>
                             <% } %>
-                        </h3>
-                        <p class="text-muted">Check back later for new opportunities</p>
-                        <a href="/dashboard" class="btn btn-primary">
-                            <i class="bi bi-house"></i> Back to Dashboard
-                        </a>
+                            
+                            <!-- Botão de Informações -->
+                            <div class="text-center mb-3">
+                                <button class="btn btn-outline-info btn-sm" onclick="openDetailsModal('<%= item.id %>', '<%= swipeType === 'projects' ? 'project' : 'user' %>')">
+                                    <i class="bi bi-info-circle me-1"></i>Ver Detalhes
+                                </button>
+                            </div>
+                            
+                            <!-- Botões de Ação -->
+                            <div class="d-flex justify-content-center gap-4 mt-auto">
+                                <button class="btn btn-outline-danger btn-lg rounded-circle pass-btn" 
+                                    style="width: 60px; height: 60px;" 
+                                    onclick="swipeAction('pass', this)">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                <button class="btn btn-success btn-lg rounded-circle like-btn" 
+                                    style="width: 60px; height: 60px;" 
+                                    onclick="swipeAction('like', this)">
+                                    <i class="bi bi-heart-fill"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <% }); %>
+                <% } else { %>
+                <div class="text-center py-5">
+                    <i class="bi bi-heart-break display-1 text-muted mb-3"></i>
+                    <h3 class="text-muted">Nenhum 
+                    <% if (swipeType === 'projects') { %>
+                    projeto
+                    <% } else { %>
+                    colaborador
+                    <% } %>
+                    </h3>
+                    <p class="text-muted">Verifique mais tarde para novas oportunidades</p>
+                    <a href="/dashboard" class="btn btn-primary">
+                        <i class="bi bi-house"></i> Voltar para o Painel
+                    </a>
+                </div>
                 <% } %>
             </div>
 
-            <!-- Instructions -->
+            <!-- Instruções -->
             <% if (items && items.length > 0) { %>
-                <div class="text-center mt-4">
-                    <div class="d-flex justify-content-center align-items-center gap-4">
-                        <div class="d-flex align-items-center text-muted">
-                            <i class="bi bi-x-circle text-danger me-2"></i>
-                            <span>Pass</span>
-                        </div>
-                        <div class="d-flex align-items-center text-muted">
-                            <i class="bi bi-heart-fill text-success me-2"></i>
-                            <span>Like</span>
-                        </div>
-                        <div class="d-flex align-items-center text-muted">
-                            <i class="bi bi-info-circle text-info me-2"></i>
-                            <span>Details</span>
-                        </div>
+            <div class="text-center mt-4">
+                <div class="d-flex justify-content-center align-items-center gap-4">
+                    <div class="d-flex align-items-center text-muted">
+                        <i class="bi bi-x-circle text-danger me-2"></i>
+                        <span>Passe</span>
                     </div>
-                    <small class="text-muted d-block mt-2">
-                        You can also swipe left to pass or right to like
-                    </small>
+                    <div class="d-flex align-items-center text-muted">
+                        <i class="bi bi-heart-fill text-success me-2"></i>
+                        <span>Goste</span>
+                    </div>
+                    <div class="d-flex align-items-center text-muted">
+                        <i class="bi bi-info-circle text-info me-2"></i>
+                        <span>Detalhes</span>
+                    </div>
                 </div>
+                <small class="text-muted d-block mt-2">
+                    Você também pode deslizar para a esquerda para passar ou para a direita para gostar
+                </small>
+            </div>
             <% } %>
         </div>
     </div>
 </div>
 
-<!-- Match Modal -->
+<!-- Modal de Match -->
 <div class="modal fade" id="matchModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -213,21 +213,21 @@
                 <div class="mb-4">
                     <i class="bi bi-heart-fill display-1 text-danger"></i>
                 </div>
-                <h2 class="fw-bold text-primary mb-3">It's a Match!</h2>
-                <p class="text-muted mb-4">You and this 
-                    <% if (swipeType === 'projects') { %>
-                        project
-                    <% } else { %>
-                        collaborator
-                    <% } %>
-                    are interested in each other.
+                <h2 class="fw-bold text-primary mb-3">É um Match!</h2>
+                <p class="text-muted mb-4">Você e este 
+                <% if (swipeType === 'projects') { %>
+                projeto
+                <% } else { %>
+                colaborador
+                <% } %>
+                estão interessados um no outro.
                 </p>
                 <div class="d-flex gap-3">
                     <button type="button" class="btn btn-outline-secondary flex-fill" data-bs-dismiss="modal">
-                        Keep Swiping
+                        Continue Deslizando
                     </button>
                     <a href="/match/matches" class="btn btn-primary flex-fill">
-                        View Matches
+                        Ver Matches
                     </a>
                 </div>
             </div>
@@ -235,23 +235,23 @@
     </div>
 </div>
 
-<!-- Details Modal -->
+<!-- Modal de Detalhes -->
 <div class="modal fade" id="detailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="detailsModalTitle">Details</h5>
+                <h5 class="modal-title" id="detailsModalTitle">Detalhes</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="detailsModalBody">
                 <div class="text-center">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                        <span class="visually-hidden">Carregando...</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
@@ -318,23 +318,23 @@
         
         isAnimating = true;
         
-        // Animate card
+        // Animação do cartão
         currentCard.classList.add(action === 'like' ? 'swiped-right' : 'swiped-left');
         
-        // Prepare swipe data
+        // Preparar dados de deslize
         const swipeData = {
             targetId: targetId,
             action: action,
             targetType: targetType
         };
 
-        // Add projectId if idealizer is swiping on collaborators
+        // Adicionar projectId se o idealizador estiver deslizando em colaboradores
         const projectId = currentCard.dataset.projectId;
         if (projectId) {
             swipeData.projectId = projectId;
         }
         
-        // Send swipe action to server
+        // Enviar ação de deslize para o servidor
         fetch('/match/swipe', {
             method: 'POST',
             headers: {
@@ -345,22 +345,22 @@
         .then(response => response.json())
         .then(data => {
             if (data.success && data.matchCreated) {
-                // Show match modal
+                // Mostrar modal de match
                 const matchModal = new bootstrap.Modal(document.getElementById('matchModal'));
                 matchModal.show();
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Erro:', error);
         });
         
-        // Move to next card
+        // Mover para o próximo cartão
         setTimeout(() => {
             currentCard.style.display = 'none';
             currentCardIndex++;
             isAnimating = false;
             
-            // Update z-index of remaining cards
+            // Atualizar z-index dos cartões restantes
             for (let i = currentCardIndex; i < cards.length; i++) {
                 const card = cards[i];
                 const newIndex = i - currentCardIndex;
@@ -368,59 +368,59 @@
                 card.style.transform = `translateY(${newIndex * 5}px) scale(${1 - (newIndex * 0.02)})`;
             }
             
-            // Check if no more cards
+            // Verificar se não há mais cartões
             if (currentCardIndex >= cards.length) {
                 document.getElementById('swipe-container').innerHTML = `
-                    <div class="text-center py-5">
-                        <i class="bi bi-check-circle display-1 text-success mb-3"></i>
-                        <h3 class="text-muted">All done!</h3>
-                        <p class="text-muted">You've seen all available options. Check back later for more!</p>
-                        <a href="/dashboard" class="btn btn-primary">
-                            <i class="bi bi-house"></i> Back to Dashboard
-                        </a>
-                    </div>
+                <div class="text-center py-5">
+                    <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+                    <h3 class="text-muted">Tudo pronto!</h3>
+                    <p class="text-muted">Você viu todas as opções disponíveis. Verifique mais tarde para mais!</p>
+                    <a href="/dashboard" class="btn btn-primary">
+                        <i class="bi bi-house"></i> Voltar para o Painel
+                    </a>
+                </div>
                 `;
             }
         }, 300);
     }
 
-    // Function to open details modal
+    // Função para abrir modal de detalhes
     function openDetailsModal(id, type) {
         const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
         const modalTitle = document.getElementById('detailsModalTitle');
         const modalBody = document.getElementById('detailsModalBody');
         
-        // Show loading
-        modalTitle.textContent = 'Loading...';
+        // Mostrar carregando
+        modalTitle.textContent = 'Carregando...';
         modalBody.innerHTML = `
-            <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
             </div>
+        </div>
         `;
         
         modal.show();
         
-        // Fetch details
+        // Buscar detalhes
         fetch(`/match/${type}/${id}`)
-            .then(response => response.json())
-            .then(data => {
-                if (type === 'project') {
-                    displayProjectDetails(data);
-                } else {
-                    displayUserDetails(data);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                modalBody.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        Error loading details. Please try again.
-                    </div>
-                `;
-            });
+        .then(response => response.json())
+        .then(data => {
+            if (type === 'project') {
+                displayProjectDetails(data);
+            } else {
+                displayUserDetails(data);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            modalBody.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Erro ao carregar detalhes. Por favor, tente novamente.
+            </div>
+            `;
+        });
     }
 
     function displayProjectDetails(data) {
@@ -441,49 +441,49 @@
         }
         
         modalBody.innerHTML = `
-            <div class="mb-4">
-                <h6 class="fw-bold text-primary">Description</h6>
-                <p>${project.description}</p>
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary">Descrição</h6>
+            <p>${project.description}</p>
+        </div>
+        
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary">Objetivos</h6>
+            <p>${project.objectives || 'Nenhum objetivo especificado'}</p>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6 class="fw-bold text-primary">Timeline</h6>
+                <p><i class="bi bi-clock me-2"></i>${project.timeline}</p>
             </div>
-            
-            <div class="mb-4">
-                <h6 class="fw-bold text-primary">Objectives</h6>
-                <p>${project.objectives || 'No objectives specified'}</p>
+            <div class="col-md-6">
+                <h6 class="fw-bold text-primary">Localização</h6>
+                <p><i class="bi bi-geo-alt me-2"></i>${project.location_preference}</p>
             </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <h6 class="fw-bold text-primary">Timeline</h6>
-                    <p><i class="bi bi-clock me-2"></i>${project.timeline}</p>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="fw-bold text-primary">Location</h6>
-                    <p><i class="bi bi-geo-alt me-2"></i>${project.location_preference}</p>
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <h6 class="fw-bold text-primary">Idealizer</h6>
-                <p><i class="bi bi-person me-2"></i>${project.first_name} ${project.last_name}</p>
-            </div>
-            
-            ${Object.keys(skillsByCategory).length > 0 ? `
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary">Required Skills</h6>
-                    ${Object.keys(skillsByCategory).map(category => `
-                        <div class="mb-3">
-                            <strong class="text-muted">${category}</strong>
-                            <div class="mt-2">
-                                ${skillsByCategory[category].map(skill => `
-                                    <span class="badge bg-light text-dark border me-2 mb-1">
-                                        ${skill.name} <small>(${skill.required_level})</small>
-                                    </span>
-                                `).join('')}
-                            </div>
-                        </div>
+        </div>
+        
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary">Idealizador</h6>
+            <p><i class="bi bi-person me-2"></i>${project.first_name} ${project.last_name}</p>
+        </div>
+        
+        ${Object.keys(skillsByCategory).length > 0 ? `
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary">Habilidades Requeridas</h6>
+            ${Object.keys(skillsByCategory).map(category => `
+            <div class="mb-3">
+                <strong class="text-muted">${category}</strong>
+                <div class="mt-2">
+                    ${skillsByCategory[category].map(skill => `
+                    <span class="badge bg-light text-dark border me-2 mb-1">
+                        ${skill.name} <small>(${skill.required_level})</small>
+                    </span>
                     `).join('')}
                 </div>
-            ` : ''}
+            </div>
+            `).join('')}
+        </div>
+        ` : ''}
         `;
     }
 
@@ -505,61 +505,61 @@
         }
         
         modalBody.innerHTML = `
-            <div class="text-center mb-4">
-                <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-                     style="width: 100px; height: 100px; font-size: 2rem;">
-                    ${user.profile_picture ? 
-                        `<img src="${user.profile_picture}" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">` :
-                        `${user.first_name ? user.first_name.charAt(0) : user.email.charAt(0)}`
-                    }
-                </div>
-                <h4 class="fw-bold">${user.first_name} ${user.last_name}</h4>
-                <div class="d-flex justify-content-center gap-3 text-muted">
-                    <span><i class="bi bi-geo-alt me-1"></i>${user.location || 'Location not specified'}</span>
-                    <span><i class="bi bi-award me-1"></i>${user.experience_level ? user.experience_level.charAt(0).toUpperCase() + user.experience_level.slice(1) : 'Not specified'}</span>
-                </div>
-                ${user.availability ? `
-                    <span class="badge bg-success mt-2">
-                        <i class="bi bi-clock"></i> ${user.availability.charAt(0).toUpperCase() + user.availability.slice(1)}
-                    </span>
-                ` : ''}
+        <div class="text-center mb-4">
+            <div class="profile-avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                style="width: 100px; height: 100px; font-size: 2rem;">
+                ${user.profile_picture ? 
+                `<img src="${user.profile_picture}" alt="Perfil" class="rounded-circle w-100 h-100 object-fit-cover">` :
+                `${user.first_name ? user.first_name.charAt(0) : user.email.charAt(0)}`
+                }
             </div>
-            
-            ${user.bio ? `
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary">About</h6>
-                    <p>${user.bio}</p>
-                </div>
+            <h4 class="fw-bold">${user.first_name} ${user.last_name}</h4>
+            <div class="d-flex justify-content-center gap-3 text-muted">
+                <span><i class="bi bi-geo-alt me-1"></i>${user.location || 'Localização não especificada'}</span>
+                <span><i class="bi bi-award me-1"></i>${user.experience_level ? user.experience_level.charAt(0).toUpperCase() + user.experience_level.slice(1) : 'Não especificado'}</span>
+            </div>
+            ${user.availability ? `
+            <span class="badge bg-success mt-2">
+                <i class="bi bi-clock"></i> ${user.availability.charAt(0).toUpperCase() + user.availability.slice(1)}
+            </span>
             ` : ''}
-            
-            ${Object.keys(skillsByCategory).length > 0 ? `
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary">Skills</h6>
-                    ${Object.keys(skillsByCategory).map(category => `
-                        <div class="mb-3">
-                            <strong class="text-muted">${category}</strong>
-                            <div class="mt-2">
-                                ${skillsByCategory[category].map(skill => `
-                                    <span class="badge bg-light text-dark border me-2 mb-1">
-                                        ${skill.name} <small>(${skill.proficiency_level})</small>
-                                    </span>
-                                `).join('')}
-                            </div>
-                        </div>
+        </div>
+        
+        ${user.bio ? `
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary">Sobre</h6>
+            <p>${user.bio}</p>
+        </div>
+        ` : ''}
+        
+        ${Object.keys(skillsByCategory).length > 0 ? `
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary">Habilidades</h6>
+            ${Object.keys(skillsByCategory).map(category => `
+            <div class="mb-3">
+                <strong class="text-muted">${category}</strong>
+                <div class="mt-2">
+                    ${skillsByCategory[category].map(skill => `
+                    <span class="badge bg-light text-dark border me-2 mb-1">
+                        ${skill.name} <small>(${skill.proficiency_level})</small>
+                    </span>
                     `).join('')}
                 </div>
-            ` : ''}
-            
-            ${user.contact_info ? `
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary">Contact</h6>
-                    <p><i class="bi bi-envelope me-2"></i>${user.email}</p>
-                </div>
-            ` : ''}
+            </div>
+            `).join('')}
+        </div>
+        ` : ''}
+        
+        ${user.contact_info ? `
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary">Contato</h6>
+            <p><i class="bi bi-envelope me-2"></i>${user.email}</p>
+        </div>
+        ` : ''}
         `;
     }
 
-    // Touch/swipe support (resto do código permanece igual)
+    // Suporte para toque/deslize (resto do código permanece igual)
     let startX = 0;
     let startY = 0;
     let currentX = 0;
@@ -637,11 +637,11 @@
         currentCard.classList.remove('swiping');
         
         if (Math.abs(deltaX) > 100) {
-            // Swipe detected
+            // Deslize detectado
             const action = deltaX > 0 ? 'like' : 'pass';
             swipeAction(action);
         } else {
-            // Snap back
+            // Voltar ao lugar
             currentCard.style.transform = '';
             currentCard.style.opacity = '';
         }

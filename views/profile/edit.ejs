@@ -1,142 +1,139 @@
-
-
-
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card border-0 shadow">
                 <div class="card-body p-5">
                     <div class="text-center mb-4">
-                        <h1 class="h3 fw-bold">Edit Your Profile</h1>
-                        <p class="text-muted">Update your information to stay current</p>
+                        <h1 class="h3 fw-bold">Editar Seu Perfil</h1>
+                        <p class="text-muted">Atualize suas informações para ficar atualizado</p>
                     </div>
 
                     <form action="/profile/edit" method="POST">
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label for="first_name" class="form-label">First Name *</label>
+                                <label for="first_name" class="form-label">Nome *</label>
                                 <input type="text" class="form-control" id="first_name" name="first_name" 
-                                       value="<%= user.first_name || '' %>" required>
+                                    value="<%= user.first_name || '' %>" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="last_name" class="form-label">Last Name *</label>
+                                <label for="last_name" class="form-label">Sobrenome *</label>
                                 <input type="text" class="form-control" id="last_name" name="last_name" 
-                                       value="<%= user.last_name || '' %>" required>
+                                    value="<%= user.last_name || '' %>" required>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="bio" class="form-label">Bio *</label>
+                            <label for="bio" class="form-label">Biografia *</label>
                             <textarea class="form-control" id="bio" name="bio" rows="4" required 
-                                      placeholder="Tell us about yourself, your interests, and what you're passionate about..."><%= user.bio || '' %></textarea>
-                            <div class="form-text">Minimum 10 characters</div>
+                                placeholder="Conte sobre você, seus interesses e o que você é apaixonado..."><%= user.bio || '' %></textarea>
+                            <div class="form-text">Mínimo de 10 caracteres</div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label for="location" class="form-label">Location *</label>
+                                <label for="location" class="form-label">Localização *</label>
                                 <input type="text" class="form-control" id="location" name="location" 
-                                       value="<%= user.location || '' %>" 
-                                       placeholder="City, Country" required>
+                                    value="<%= user.location || '' %>" 
+                                    placeholder="Cidade, País" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="experience_level" class="form-label">Experience Level *</label>
+                                <label for="experience_level" class="form-label">Nível de Experiência *</label>
                                 <select class="form-select" id="experience_level" name="experience_level" required>
-                                    <option value="">Select your level</option>
+                                    <option value="">Selecione seu nível</option>
                                     <option value="beginner" <%= user.experience_level === 'beginner' ? 'selected' : '' %>>
-                                        Beginner (0-2 years)
+                                        Iniciante (0-2 anos)
                                     </option>
                                     <option value="intermediate" <%= user.experience_level === 'intermediate' ? 'selected' : '' %>>
-                                        Intermediate (2-5 years)
+                                        Intermediário (2-5 anos)
                                     </option>
                                     <option value="advanced" <%= user.experience_level === 'advanced' ? 'selected' : '' %>>
-                                        Advanced (5+ years)
+                                        Avançado (5+ anos)
                                     </option>
                                 </select>
                             </div>
                         </div>
 
                         <% if (user.user_type === 'collaborator') { %>
-                            <div class="mb-3">
-                                <label for="availability" class="form-label">Availability</label>
-                                <select class="form-select" id="availability" name="availability">
-                                    <option value="">Select availability</option>
-                                    <option value="full-time" <%= user.availability === 'full-time' ? 'selected' : '' %>>
-                                        Full-time
-                                    </option>
-                                    <option value="part-time" <%= user.availability === 'part-time' ? 'selected' : '' %>>
-                                        Part-time
-                                    </option>
-                                    <option value="weekends" <%= user.availability === 'weekends' ? 'selected' : '' %>>
-                                        Weekends only
-                                    </option>
-                                    <option value="flexible" <%= user.availability === 'flexible' ? 'selected' : '' %>>
-                                        Flexible
-                                    </option>
-                                </select>
-                            </div>
+                        <div class="mb-3">
+                            <label for="availability" class="form-label">Disponibilidade</label>
+                            <select class="form-select" id="availability" name="availability">
+                                <option value="">Selecione a disponibilidade</option>
+                                <option value="full-time" <%= user.availability === 'full-time' ? 'selected' : '' %>>
+                                    Tempo integral
+                                </option>
+                                <option value="part-time" <%= user.availability === 'part-time' ? 'selected' : '' %>>
+                                    Tempo parcial
+                                </option>
+                                <option value="weekends" <%= user.availability === 'weekends' ? 'selected' : '' %>>
+                                    Apenas fins de semana
+                                </option>
+                                <option value="flexible" <%= user.availability === 'flexible' ? 'selected' : '' %>>
+                                    Flexível
+                                </option>
+                            </select>
+                        </div>
 
-                            <div class="mb-4">
-                                <label class="form-label">Skills & Technologies</label>
-                                <div class="row g-2" style="max-height: 300px; overflow-y: auto;">
-                                    <% 
-                                    const userSkillIds = userSkills ? userSkills.map(s => s.id) : [];
-                                    const groupedSkills = {};
-                                    skills.forEach(skill => {
-                                        if (!groupedSkills[skill.category]) {
-                                            groupedSkills[skill.category] = [];
-                                        }
-                                        groupedSkills[skill.category].push(skill);
-                                    });
-                                    %>
-                                    <% Object.keys(groupedSkills).forEach(category => { %>
-                                        <div class="col-12">
-                                            <h6 class="text-muted mb-2"><%= category %></h6>
-                                        </div>
-                                        <% groupedSkills[category].forEach(skill => { %>
-                                            <div class="col-md-4 col-sm-6">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" 
-                                                           id="skill_<%= skill.id %>" name="skills" value="<%= skill.id %>"
-                                                           <%= userSkillIds.includes(skill.id) ? 'checked' : '' %>>
-                                                    <label class="form-check-label" for="skill_<%= skill.id %>">
-                                                        <%= skill.name %>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        <% }); %>
-                                    <% }); %>
+                        <div class="mb-4">
+                            <label class="form-label">Habilidades & Tecnologias</label>
+                            <div class="row g-2" style="max-height: 300px; overflow-y: auto;">
+                                <% 
+                                const userSkillIds = userSkills ? userSkills.map(s => s.id) : [];
+                                const groupedSkills = {};
+                                skills.forEach(skill => {
+                                    if (!groupedSkills[skill.category]) {
+                                        groupedSkills[skill.category] = [];
+                                    }
+                                    groupedSkills[skill.category].push(skill);
+                                });
+                                %>
+                                <% Object.keys(groupedSkills).forEach(category => { %>
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-2"><%= category %></h6>
                                 </div>
+                                <% groupedSkills[category].forEach(skill => { %>
+                                <div class="col-md-4 col-sm-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                            id="skill_<%= skill.id %>" name="skills" value="<%= skill.id %>"
+                                            <%= userSkillIds.includes(skill.id) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="skill_<%= skill.id %>">
+                                            <%= skill.name %>
+                                        </label>
+                                    </div>
+                                </div>
+                                <% }); %>
+                                <% }); %>
                             </div>
+                        </div>
                         <% } %>
 
-                        <!-- Contact Information -->
+                        <!-- Informações de Contato -->
                         <div class="card bg-light mb-4">
                             <div class="card-body">
-                                <h5 class="card-title">Contact Information</h5>
+                                <h5 class="card-title">Informações de Contato</h5>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label for="phone" class="form-label">Phone Number</label>
+                                        <label for="phone" class="form-label">Número de Telefone</label>
                                         <input type="tel" class="form-control" id="phone" name="phone" 
-                                               value="<%= user.contact_info ? user.contact_info.phone : '' %>">
+                                            value="<%= user.contact_info ? user.contact_info.phone : '' %>">
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="linkedin" class="form-label">LinkedIn Profile</label>
+                                        <label for="linkedin" class="form-label">Perfil do LinkedIn</label>
                                         <input type="url" class="form-control" id="linkedin" name="linkedin" 
-                                               value="<%= user.contact_info ? user.contact_info.linkedin : '' %>"
-                                               placeholder="https://linkedin.com/in/yourprofile">
+                                            value="<%= user.contact_info ? user.contact_info.linkedin : '' %>"
+                                            placeholder="https://linkedin.com/in/seuperfil">
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="github" class="form-label">GitHub Profile</label>
+                                        <label for="github" class="form-label">Perfil do GitHub</label>
                                         <input type="url" class="form-control" id="github" name="github" 
-                                               value="<%= user.contact_info ? user.contact_info.github : '' %>"
-                                               placeholder="https://github.com/yourusername">
+                                            value="<%= user.contact_info ? user.contact_info.github : '' %>"
+                                            placeholder="https://github.com/seuusername">
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="portfolio" class="form-label">Portfolio Website</label>
+                                        <label for="portfolio" class="form-label">Site de Portfólio</label>
                                         <input type="url" class="form-control" id="portfolio" name="portfolio" 
-                                               value="<%= user.portfolio_links ? user.portfolio_links.portfolio : '' %>"
-                                               placeholder="https://yourportfolio.com">
+                                            value="<%= user.portfolio_links ? user.portfolio_links.portfolio : '' %>"
+                                            placeholder="https://seuportifolio.com">
                                     </div>
                                 </div>
                             </div>
@@ -144,10 +141,10 @@
 
                         <div class="d-flex gap-3">
                             <button type="submit" class="btn btn-primary flex-fill">
-                                <i class="bi bi-check-circle"></i> Update Profile
+                                <i class="bi bi-check-circle"></i> Atualizar Perfil
                             </button>
                             <a href="/profile/view" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle"></i> Cancel
+                                <i class="bi bi-x-circle"></i> Cancelar
                             </a>
                         </div>
                     </form>

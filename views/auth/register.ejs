@@ -1,30 +1,27 @@
-
-
-
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-6 col-md-8">
             <div class="card border-0 shadow">
                 <div class="card-body p-5">
                     <div class="text-center mb-4">
-                        <h1 class="h3 fw-bold">Join Pivot</h1>
-                        <p class="text-muted">Create your account and start connecting</p>
+                        <h1 class="h3 fw-bold">Junte-se ao Pivot</h1>
+                        <p class="text-muted">Crie sua conta e comece a se conectar</p>
                     </div>
 
                     <form action="/auth/register" method="POST">
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email Address</label>
+                            <label for="email" class="form-label">Endereço de Email</label>
                             <input type="email" class="form-control" id="email" name="email" required>
                         </div>
 
                         <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
+                            <label for="password" class="form-label">Senha</label>
                             <input type="password" class="form-control" id="password" name="password" required minlength="6">
-                            <div class="form-text">Password must be at least 6 characters long</div>
+                            <div class="form-text">A senha deve ter pelo menos 6 caracteres</div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label">I want to join as:</label>
+                            <label class="form-label">Quero me juntar como:</label>
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="card h-100">
@@ -32,8 +29,8 @@
                                             <input type="radio" class="btn-check" name="user_type" id="idealizer" value="idealizer" required>
                                             <label class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center" for="idealizer">
                                                 <i class="bi bi-lightbulb-fill display-6 mb-2"></i>
-                                                <strong>Idealizer</strong>
-                                                <small class="text-muted">I have project ideas</small>
+                                                <strong>Idealizador</strong>
+                                                <small class="text-muted">Tenho ideias de projetos</small>
                                             </label>
                                         </div>
                                     </div>
@@ -44,8 +41,8 @@
                                             <input type="radio" class="btn-check" name="user_type" id="collaborator" value="collaborator" required>
                                             <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center" for="collaborator">
                                                 <i class="bi bi-tools display-6 mb-2"></i>
-                                                <strong>Collaborator</strong>
-                                                <small class="text-muted">I have skills to offer</small>
+                                                <strong>Colaborador</strong>
+                                                <small class="text-muted">Tenho habilidades para oferecer</small>
                                             </label>
                                         </div>
                                     </div>
@@ -55,13 +52,13 @@
 
                         <div class="d-grid mb-3">
                             <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-person-plus"></i> Create Account
+                                <i class="bi bi-person-plus"></i> Criar Conta
                             </button>
                         </div>
                     </form>
 
                     <div class="text-center mb-3">
-                        <span class="text-muted">or continue with</span>
+                        <span class="text-muted">ou continue com</span>
                     </div>
 
                     <div class="row g-2 mb-4">
@@ -79,8 +76,8 @@
 
                     <div class="text-center">
                         <p class="text-muted">
-                            Already have an account? 
-                            <a href="/auth/login" class="text-decoration-none">Sign in here</a>
+                            Já tem uma conta? 
+                            <a href="/auth/login" class="text-decoration-none">Faça login aqui</a>
                         </p>
                     </div>
                 </div>
@@ -90,23 +87,23 @@
 </div>
 
 <style>
-.btn-check:checked + .btn-outline-warning {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #000;
-}
+    .btn-check:checked + .btn-outline-warning {
+        background-color: #ffc107;
+        border-color: #ffc107;
+        color: #000;
+    }
 
-.btn-check:checked + .btn-outline-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
-}
+    .btn-check:checked + .btn-outline-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+    }
 
-.card {
-    transition: transform 0.2s ease;
-}
+    .card {
+        transition: transform 0.2s ease;
+    }
 
-.card:hover {
-    transform: translateY(-2px);
-}
+    .card:hover {
+        transform: translateY(-2px);
+    }
 </style>

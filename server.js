@@ -162,16 +162,16 @@ app.use('/chat', require('./routes/chat'));
 // Error handling
 app.use((req, res) => {
   res.status(404).render('error', { 
-    title: 'Page Not Found',
-    error: 'The page you are looking for does not exist.'
+    title: 'Página não encontrada',
+    error: 'A página que está procurando não existe.'
   });
 });
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).render('error', {
-    title: 'Server Error',
-    error: 'Something went wrong on our end.'
+    title: 'Erro no Servidor',
+    error: 'Algo deu errado por aqui.'
   });
 });
 

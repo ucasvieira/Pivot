@@ -1,108 +1,105 @@
-
-
-
 <div class="container py-4">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h1 class="h3 fw-bold mb-1">Messages</h1>
-                    <p class="text-muted mb-0">Chat with your matched collaborators</p>
+                    <h1 class="h3 fw-bold mb-1">Mensagens</h1>
+                    <p class="text-muted mb-0">Converse com seus colaboradores matchados</p>
                 </div>
                 <a href="/match/matches" class="btn btn-outline-primary">
-                    <i class="bi bi-people"></i> View All Matches
+                    <i class="bi bi-people"></i> Ver Todos os Matches
                 </a>
             </div>
 
             <% if (conversations && conversations.length > 0) { %>
-                <div class="row g-4">
-                    <% conversations.forEach(function(conversation) { %>
-                        <div class="col-lg-6">
-                            <a href="/chat/conversation/<%= conversation.match_id %>" class="text-decoration-none">
-                                <div class="card border-0 shadow-sm h-100 chat-card">
-                                    <div class="card-body p-4">
-                                        <div class="d-flex align-items-start">
-                                            <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
-                                                 style="width: 50px; height: 50px;">
-                                                <% 
-                                                const otherUserPicture = conversation.collaborator_id === user.id ? conversation.idealizer_picture : conversation.collaborator_picture;
-                                                const otherUserFirstName = conversation.collaborator_id === user.id ? conversation.idealizer_first_name : conversation.collaborator_first_name;
-                                                %>
-                                                <% if (otherUserPicture) { %>
-                                                    <img src="<%= otherUserPicture %>" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">
-                                                <% } else { %>
-                                                    <%= otherUserFirstName ? otherUserFirstName.charAt(0) : 'U' %>
-                                                <% } %>
+            <div class="row g-4">
+                <% conversations.forEach(function (conversation) { %>
+                <div class="col-lg-6">
+                    <a href="/chat/conversation/<%= conversation.match_id %>" class="text-decoration-none">
+                        <div class="card border-0 shadow-sm h-100 chat-card">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-start">
+                                    <div class="profile-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                                        style="width: 50px; height: 50px;">
+                                        <% 
+                                        const otherUserPicture = conversation.collaborator_id === user.id ? conversation.idealizer_picture : conversation.collaborator_picture;
+                                        const otherUserFirstName = conversation.collaborator_id === user.id ? conversation.idealizer_first_name : conversation.collaborator_first_name;
+                                        %>
+                                        <% if (otherUserPicture) { %>
+                                        <img src="<%= otherUserPicture %>" alt="Perfil" class="rounded-circle w-100 h-100 object-fit-cover">
+                                        <% } else { %>
+                                        <%= otherUserFirstName ? otherUserFirstName.charAt(0) : 'U' %>
+                                        <% } %>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="fw-bold mb-1">
+                                                    <%= conversation.collaborator_id === user.id ? conversation.idealizer_first_name : conversation.collaborator_first_name %>
+                                                    <%= conversation.collaborator_id === user.id ? conversation.idealizer_last_name : conversation.collaborator_last_name %>
+                                                </h6>
+                                                <p class="text-primary small mb-0">
+                                                    <i class="bi bi-folder me-1"></i>
+                                                    <%= conversation.project_title %>
+                                                </p>
                                             </div>
-                                            <div class="flex-grow-1">
-                                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                                    <div>
-                                                        <h6 class="fw-bold mb-1">
-                                                            <%= conversation.collaborator_id === user.id ? conversation.idealizer_first_name : conversation.collaborator_first_name %>
-                                                            <%= conversation.collaborator_id === user.id ? conversation.idealizer_last_name : conversation.collaborator_last_name %>
-                                                        </h6>
-                                                        <p class="text-primary small mb-0">
-                                                            <i class="bi bi-folder me-1"></i>
-                                                            <%= conversation.project_title %>
-                                                        </p>
-                                                    </div>
-                                                    <% if (conversation.last_message_time) { %>
-                                                        <small class="text-muted">
-                                                            <%= new Date(conversation.last_message_time).toLocaleDateString() %>
-                                                        </small>
-                                                    <% } %>
-                                                </div>
-                                                
-                                                <% if (conversation.last_message) { %>
-                                                    <p class="text-muted small mb-0">
-                                                        <%= conversation.last_message.length > 80 ? conversation.last_message.substring(0, 80) + '...' : conversation.last_message %>
-                                                    </p>
-                                                <% } else { %>
-                                                    <p class="text-muted small mb-0 fst-italic">
-                                                        Start a conversation...
-                                                    </p>
-                                                <% } %>
-                                            </div>
-                                            <div class="ms-2">
-                                                <i class="bi bi-chevron-right text-muted"></i>
-                                            </div>
+                                            <% if (conversation.last_message_time) { %>
+                                            <small class="text-muted">
+                                                <%= new Date(conversation.last_message_time).toLocaleDateString() %>
+                                            </small>
+                                            <% } %>
                                         </div>
+
+                                        <% if (conversation.last_message) { %>
+                                        <p class="text-muted small mb-0">
+                                            <%= conversation.last_message.length > 80 ? conversation.last_message.substring(0, 80) + '...' : conversation.last_message %>
+                                        </p>
+                                        <% } else { %>
+                                        <p class="text-muted small mb-0 fst-italic">
+                                            Inicie uma conversa...
+                                        </p>
+                                        <% } %>
+                                    </div>
+                                    <div class="ms-2">
+                                        <i class="bi bi-chevron-right text-muted"></i>
                                     </div>
                                 </div>
-                            </a>
+                            </div>
                         </div>
-                    <% }); %>
+                    </a>
                 </div>
+                <% }); %>
+            </div>
             <% } else { %>
-                <div class="text-center py-5">
-                    <i class="bi bi-chat-dots display-1 text-muted mb-3"></i>
-                    <h3 class="text-muted">No conversations yet</h3>
-                    <p class="text-muted">Start matching with projects or collaborators to begin chatting</p>
-                    <div class="d-flex gap-3 justify-content-center">
-                        <a href="/match/swipe" class="btn btn-primary">
-                            <i class="bi bi-heart"></i> Start Matching
-                        </a>
-                        <a href="/match/matches" class="btn btn-outline-primary">
-                            <i class="bi bi-people"></i> View Matches
-                        </a>
-                    </div>
+            <div class="text-center py-5">
+                <i class="bi bi-chat-dots display-1 text-muted mb-3"></i>
+                <h3 class="text-muted">Nenhuma conversa ainda</h3>
+                <p class="text-muted">Comece a matchar com projetos ou colaboradores para começar a conversar</p>
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="/match/swipe" class="btn btn-primary">
+                        <i class="bi bi-heart"></i> Começar a Matchar
+                    </a>
+                    <a href="/match/matches" class="btn btn-outline-primary">
+                        <i class="bi bi-people"></i> Ver Matches
+                    </a>
                 </div>
+            </div>
             <% } %>
         </div>
     </div>
 </div>
 
 <style>
-.object-fit-cover {
-    object-fit: cover;
-}
+    .object-fit-cover {
+        object-fit: cover;
+    }
 
-.chat-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+    .chat-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 
-.chat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
-}
+    .chat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+    }
 </style>
