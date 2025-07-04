@@ -1,16 +1,172 @@
-<div class="d-flex justify-content-between align-items-center">
-    <a href="/projects/view/<%= project.id %>" class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-eye"></i> Ver Detalhes
-    </a>
-    <% if (user.user_type === 'collaborator') { %>
-    <% if (projectInterests && projectInterests[project.id]) { %>
-    <span class="badge bg-success">
-        <i class="bi bi-check"></i> Interesse Demonstrado
-    </span>
-    <% } else { %>
-    <button class="btn btn-success btn-sm" onclick="showInterest(<%= project.id %>)">
-        <i class="bi bi-heart"></i> Mostrar Interesse
-    </button>
-    <% } %>
-    <% } %>
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 fw-bold mb-1">Projetos Disponíveis</h1>
+                    <p class="text-muted mb-0">Explore projetos interessantes para colaborar</p>
+                </div>
+                <% if (user.user_type === 'idealizer') { %>
+                    <div class="d-flex gap-2">
+                        <a href="/projects/my" class="btn btn-outline-primary">
+                            <i class="bi bi-folder"></i> Meus Projetos
+                        </a>
+                        <a href="/projects/create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Criar Projeto
+                        </a>
+                    </div>
+                <% } %>
+            </div>
+
+            <% if (projects && projects.length > 0) { %>
+                <div class="row g-4">
+                    <% projects.forEach(function(project) { %>
+                        <div class="col-lg-6 col-xl-4">
+                            <div class="card border-0 shadow-sm h-100 project-card">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="flex-grow-1">
+                                            <h5 class="card-title fw-bold mb-2">
+                                                <%= project.title %>
+                                            </h5>
+                                            <div class="d-flex align-items-center text-muted small mb-2">
+                                                <i class="bi bi-person me-1"></i>
+                                                <span>
+                                                    <%= project.idealizer_first_name || 'Idealizador' %> 
+                                                    <%= project.idealizer_last_name || '' %>
+                                                </span>
+                                            </div>
+                                            <% if (project.idealizer_location) { %>
+                                                <div class="d-flex align-items-center text-muted small mb-2">
+                                                    <i class="bi bi-geo-alt me-1"></i>
+                                                    <span><%= project.idealizer_location %></span>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                        <span class="badge bg-success-subtle text-success">
+                                            <%= project.status %>
+                                        </span>
+                                    </div>
+
+                                    <p class="card-text text-muted mb-3">
+                                        <%= project.description.length > 120 ? project.description.substring(0, 120) + '...' : project.description %>
+                                    </p>
+
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center text-muted small mb-1">
+                                            <i class="bi bi-clock me-1"></i>
+                                            <span>Timeline: <%= project.timeline %></span>
+                                        </div>
+                                        <div class="d-flex align-items-center text-muted small">
+                                            <i class="bi bi-geo me-1"></i>
+                                            <span><%= project.location_preference %></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <a href="/projects/view/<%= project.id %>" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-eye"></i> Ver Detalhes
+                                        </a>
+                                        
+                                        <% if (user.user_type === 'collaborator') { %>
+                                            <% if (projectInterests && projectInterests[project.id]) { %>
+                                                <span class="badge bg-info-subtle text-info">
+                                                    <i class="bi bi-check-circle"></i> Interesse demonstrado
+                                                </span>
+                                            <% } else { %>
+                                                <form action="/match/swipe" method="POST" class="d-inline">
+                                                    <input type="hidden" name="target_id" value="<%= project.id %>">
+                                                    <input type="hidden" name="target_type" value="project">
+                                                    <input type="hidden" name="action" value="like">
+                                                    <button type="submit" class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-heart"></i> Demonstrar Interesse
+                                                    </button>
+                                                </form>
+                                            <% } %>
+                                        <% } else if (project.idealizer_id === user.id) { %>
+                                            <div class="d-flex gap-1">
+                                                <a href="/projects/edit/<%= project.id %>" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <span class="badge bg-primary-subtle text-primary">
+                                                    Meu projeto
+                                                </span>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+
+                                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-4">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        Criado em <%= new Date(project.created_at).toLocaleDateString('pt-BR') %>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+
+                <!-- Paginação (se necessário) -->
+                <% if (projects.length >= 20) { %>
+                    <div class="d-flex justify-content-center mt-4">
+                        <nav aria-label="Navegação de projetos">
+                            <ul class="pagination">
+                                <li class="page-item disabled">
+                                    <span class="page-link">Anterior</span>
+                                </li>
+                                <li class="page-item active">
+                                    <span class="page-link">1</span>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Próximo</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                <% } %>
+
+            <% } else { %>
+                <div class="text-center py-5">
+                    <i class="bi bi-folder-x display-1 text-muted mb-3"></i>
+                    <h3 class="text-muted">Nenhum projeto encontrado</h3>
+                    <p class="text-muted">
+                        <% if (user.user_type === 'idealizer') { %>
+                            Que tal criar seu primeiro projeto?
+                        <% } else { %>
+                            Não há projetos disponíveis no momento. Volte mais tarde!
+                        <% } %>
+                    </p>
+                    <% if (user.user_type === 'idealizer') { %>
+                        <a href="/projects/create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Criar Primeiro Projeto
+                        </a>
+                    <% } else { %>
+                        <a href="/match/swipe" class="btn btn-primary">
+                            <i class="bi bi-heart"></i> Explorar Matching
+                        </a>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+    </div>
 </div>
+
+<style>
+    .project-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .project-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+    }
+
+    .btn-sm {
+        font-size: 0.8rem;
+    }
+</style>
