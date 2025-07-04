@@ -4,6 +4,7 @@ const { ensureAuthenticated, ensureProfileComplete } = require('../middleware/au
 const Project = require('../models/Project');
 const Skill = require('../models/Skill');
 const ProjectSkill = require('../models/ProjectSkill');
+const SwipeHistory = require('../models/SwipeHistory');
 
 // Middleware para todas as rotas de projetos
 router.use(ensureAuthenticated);
@@ -17,21 +18,21 @@ router.get('/', async (req, res) => {
     // Se for colaborador, verificar quais projetos já demonstrou interesse
     let projectInterests = {};
     if (req.user.user_type === 'collaborator') {
-      // Aqui você pode implementar a lógica para verificar interesses
-      // Por enquanto, deixamos vazio
+    // Aqui você pode implementar a lógica para verificar interesses
+    // Por enquanto, deixamos vazio
     }
     
     res.render('projects/list', {
-      projects,
-      projectInterests,
-      user: req.user,
-      title: 'Projetos Disponíveis'
+    projects,
+    projectInterests,
+    user: req.user,
+    title: 'Projetos Disponíveis'
     });
   } catch (error) {
     console.error('Erro ao carregar projetos:', error);
     res.status(500).render('error', { 
-      message: 'Erro ao carregar projetos',
-      error: process.env.NODE_ENV === 'development' ? error : {}
+    message: 'Erro ao carregar projetos',
+    error: process.env.NODE_ENV === 'development' ? error : {}
     });
   }
 });
@@ -40,21 +41,21 @@ router.get('/', async (req, res) => {
 router.get('/my', async (req, res) => {
   try {
     if (req.user.user_type !== 'idealizer') {
-      return res.redirect('/projects');
+    return res.redirect('/projects');
     }
 
     const projects = await Project.findByIdealizerId(req.user.id);
     
     res.render('projects/my-projects', {
-      projects,
-      user: req.user,
-      title: 'Meus Projetos'
+    projects,
+    user: req.user,
+    title: 'Meus Projetos'
     });
   } catch (error) {
     console.error('Erro ao carregar meus projetos:', error);
     res.status(500).render('error', { 
-      message: 'Erro ao carregar seus projetos',
-      error: process.env.NODE_ENV === 'development' ? error : {}
+    message: 'Erro ao carregar seus projetos',
+    error: process.env.NODE_ENV === 'development' ? error : {}
     });
   }
 });
@@ -63,22 +64,22 @@ router.get('/my', async (req, res) => {
 router.get('/create', async (req, res) => {
   try {
     if (req.user.user_type !== 'idealizer') {
-      req.flash('error', 'Apenas idealizadores podem criar projetos');
-      return res.redirect('/projects');
+    req.flash('error', 'Apenas idealizadores podem criar projetos');
+    return res.redirect('/projects');
     }
 
     const skills = await Skill.getAll();
     
     res.render('projects/create', {
-      skills,
-      user: req.user,
-      title: 'Criar Projeto'
+    skills,
+    user: req.user,
+    title: 'Criar Projeto'
     });
   } catch (error) {
     console.error('Erro ao carregar formulário de criação:', error);
     res.status(500).render('error', { 
-      message: 'Erro ao carregar formulário',
-      error: process.env.NODE_ENV === 'development' ? error : {}
+    message: 'Erro ao carregar formulário',
+    error: process.env.NODE_ENV === 'development' ? error : {}
     });
   }
 });
@@ -87,51 +88,51 @@ router.get('/create', async (req, res) => {
 router.post('/create', async (req, res) => {
   try {
     if (req.user.user_type !== 'idealizer') {
-      req.flash('error', 'Apenas idealizadores podem criar projetos');
-      return res.redirect('/projects');
+    req.flash('error', 'Apenas idealizadores podem criar projetos');
+    return res.redirect('/projects');
     }
 
     const { title, description, objectives, timeline, location_preference, required_skills } = req.body;
 
     // Validações básicas
     if (!title || !description || !objectives || !timeline || !location_preference) {
-      req.flash('error', 'Todos os campos obrigatórios devem ser preenchidos');
-      return res.redirect('/projects/create');
+    req.flash('error', 'Todos os campos obrigatórios devem ser preenchidos');
+    return res.redirect('/projects/create');
     }
 
     if (description.length < 20) {
-      req.flash('error', 'A descrição deve ter pelo menos 20 caracteres');
-      return res.redirect('/projects/create');
+    req.flash('error', 'A descrição deve ter pelo menos 20 caracteres');
+    return res.redirect('/projects/create');
     }
 
     // Criar projeto
     const projectData = {
-      idealizer_id: req.user.id,
-      title: title.trim(),
-      description: description.trim(),
-      objectives: objectives.trim(),
-      timeline,
-      location_preference: location_preference.trim()
+    idealizer_id: req.user.id,
+    title: title.trim(),
+    description: description.trim(),
+    objectives: objectives.trim(),
+    timeline,
+    location_preference: location_preference.trim()
     };
 
     const project = await Project.create(projectData);
 
     // Adicionar habilidades requeridas se selecionadas
     if (required_skills && Array.isArray(required_skills)) {
-      for (const skillId of required_skills) {
-        await ProjectSkill.create({
-          project_id: project.id,
-          skill_id: parseInt(skillId),
-          required_level: 'intermediate' // Valor padrão
-        });
-      }
+    for (const skillId of required_skills) {
+    await ProjectSkill.create({
+    project_id: project.id,
+    skill_id: parseInt(skillId),
+    required_level: 'intermediate' // Valor padrão
+    });
+    }
     } else if (required_skills) {
-      // Se for apenas uma skill (não array)
-      await ProjectSkill.create({
-        project_id: project.id,
-        skill_id: parseInt(required_skills),
-        required_level: 'intermediate'
-      });
+    // Se for apenas uma skill (não array)
+    await ProjectSkill.create({
+    project_id: project.id,
+    skill_id: parseInt(required_skills),
+    required_level: 'intermediate'
+    });
     }
 
     req.flash('success', 'Projeto criado com sucesso!');
@@ -143,6 +144,7 @@ router.post('/create', async (req, res) => {
     res.redirect('/projects/create');
   }
 });
+
 
 // Visualizar projeto específico
 router.get('/view/:id', async (req, res) => {
@@ -162,15 +164,21 @@ router.get('/view/:id', async (req, res) => {
     let hasInterest = false;
     if (req.user.user_type === 'collaborator') {
       // Implementar verificação de interesse
-      // hasInterest = await SwipeHistory.hasUserSwipedTarget(req.user.id, projectId, 'project', null);
+      // For now, let's assume a placeholder function
+      hasInterest = await SwipeHistory.hasUserSwipedTarget(req.user.id, projectId, 'project', null);
     }
+
+    // Verificar se o usuário é o dono do projeto
+    const isOwner = project.idealizer_id === req.user.id;
 
     res.render('projects/view', {
       project,
       projectSkills,
       hasInterest,
       user: req.user,
-      title: project.title
+      title: project.title,
+      isOwner,
+      hasAlreadyShownInterest: hasInterest // Add this line to pass hasAlreadyShownInterest to the template
     });
 
   } catch (error) {
@@ -189,14 +197,14 @@ router.get('/edit/:id', async (req, res) => {
     const project = await Project.findById(projectId);
 
     if (!project) {
-      req.flash('error', 'Projeto não encontrado');
-      return res.redirect('/projects/my');
+    req.flash('error', 'Projeto não encontrado');
+    return res.redirect('/projects/my');
     }
 
     // Verificar se o usuário é o dono do projeto
     if (project.idealizer_id !== req.user.id) {
-      req.flash('error', 'Você não tem permissão para editar este projeto');
-      return res.redirect('/projects/my');
+    req.flash('error', 'Você não tem permissão para editar este projeto');
+    return res.redirect('/projects/my');
     }
 
     const skills = await Skill.getAll();
@@ -204,18 +212,18 @@ router.get('/edit/:id', async (req, res) => {
     const selectedSkillIds = projectSkills.map(ps => ps.skill_id);
 
     res.render('projects/edit', {
-      project,
-      skills,
-      selectedSkillIds,
-      user: req.user,
-      title: 'Editar Projeto'
+    project,
+    skills,
+    selectedSkillIds,
+    user: req.user,
+    title: 'Editar Projeto'
     });
 
   } catch (error) {
     console.error('Erro ao carregar formulário de edição:', error);
     res.status(500).render('error', { 
-      message: 'Erro ao carregar formulário',
-      error: process.env.NODE_ENV === 'development' ? error : {}
+    message: 'Erro ao carregar formulário',
+    error: process.env.NODE_ENV === 'development' ? error : {}
     });
   }
 });
@@ -227,32 +235,32 @@ router.post('/edit/:id', async (req, res) => {
     const project = await Project.findById(projectId);
 
     if (!project) {
-      req.flash('error', 'Projeto não encontrado');
-      return res.redirect('/projects/my');
+    req.flash('error', 'Projeto não encontrado');
+    return res.redirect('/projects/my');
     }
 
     // Verificar se o usuário é o dono do projeto
     if (project.idealizer_id !== req.user.id) {
-      req.flash('error', 'Você não tem permissão para editar este projeto');
-      return res.redirect('/projects/my');
+    req.flash('error', 'Você não tem permissão para editar este projeto');
+    return res.redirect('/projects/my');
     }
 
     const { title, description, objectives, timeline, location_preference, status, required_skills } = req.body;
 
     // Validações básicas
     if (!title || !description || !objectives || !timeline || !location_preference) {
-      req.flash('error', 'Todos os campos obrigatórios devem ser preenchidos');
-      return res.redirect(`/projects/edit/${projectId}`);
+    req.flash('error', 'Todos os campos obrigatórios devem ser preenchidos');
+    return res.redirect(`/projects/edit/${projectId}`);
     }
 
     // Atualizar projeto
     const projectData = {
-      title: title.trim(),
-      description: description.trim(),
-      objectives: objectives.trim(),
-      timeline,
-      location_preference: location_preference.trim(),
-      status: status || 'active'
+    title: title.trim(),
+    description: description.trim(),
+    objectives: objectives.trim(),
+    timeline,
+    location_preference: location_preference.trim(),
+    status: status || 'active'
     };
 
     await Project.update(projectId, projectData);
@@ -261,19 +269,19 @@ router.post('/edit/:id', async (req, res) => {
     await ProjectSkill.deleteByProjectId(projectId);
     
     if (required_skills && Array.isArray(required_skills)) {
-      for (const skillId of required_skills) {
-        await ProjectSkill.create({
-          project_id: projectId,
-          skill_id: parseInt(skillId),
-          required_level: 'intermediate'
-        });
-      }
+    for (const skillId of required_skills) {
+    await ProjectSkill.create({
+    project_id: projectId,
+    skill_id: parseInt(skillId),
+    required_level: 'intermediate'
+    });
+    }
     } else if (required_skills) {
-      await ProjectSkill.create({
-        project_id: projectId,
-        skill_id: parseInt(required_skills),
-        required_level: 'intermediate'
-      });
+    await ProjectSkill.create({
+    project_id: projectId,
+    skill_id: parseInt(required_skills),
+    required_level: 'intermediate'
+    });
     }
 
     req.flash('success', 'Projeto atualizado com sucesso!');
@@ -293,14 +301,14 @@ router.post('/delete/:id', async (req, res) => {
     const project = await Project.findById(projectId);
 
     if (!project) {
-      req.flash('error', 'Projeto não encontrado');
-      return res.redirect('/projects/my');
+    req.flash('error', 'Projeto não encontrado');
+    return res.redirect('/projects/my');
     }
 
     // Verificar se o usuário é o dono do projeto
     if (project.idealizer_id !== req.user.id) {
-      req.flash('error', 'Você não tem permissão para excluir este projeto');
-      return res.redirect('/projects/my');
+    req.flash('error', 'Você não tem permissão para excluir este projeto');
+    return res.redirect('/projects/my');
     }
 
     await Project.delete(projectId);
