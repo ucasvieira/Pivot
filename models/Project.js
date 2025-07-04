@@ -26,33 +26,49 @@ class Project {
   }
 
   static async findByIdealizerId(idealizerId) {
-    // Usar uma abordagem mais simples sem GROUP BY complexo
+    // Corrigir a query para incluir todas as colunas no GROUP BY
     const query = `
-      SELECT * FROM vw_projects_with_idealizer
-      WHERE idealizer_id = ?
-      ORDER BY created_at DESC
+      SELECT 
+        p.id,
+        p.idealizer_id,
+        p.title,
+        p.description,
+        p.objectives,
+        p.timeline,
+        p.location_preference,
+        p.status,
+        p.created_at,
+        p.updated_at,
+        p.idealizer_email,
+        p.idealizer_first_name,
+        p.idealizer_last_name,
+        p.idealizer_location,
+        p.idealizer_picture,
+        COUNT(m.id) as match_count,
+        COUNT(CASE WHEN m.status = 'accepted' THEN 1 END) as accepted_matches
+      FROM vw_projects_with_idealizer p
+      LEFT JOIN matches m ON p.id = m.project_id
+      WHERE p.idealizer_id = ?
+      GROUP BY 
+        p.id,
+        p.idealizer_id,
+        p.title,
+        p.description,
+        p.objectives,
+        p.timeline,
+        p.location_preference,
+        p.status,
+        p.created_at,
+        p.updated_at,
+        p.idealizer_email,
+        p.idealizer_first_name,
+        p.idealizer_last_name,
+        p.idealizer_location,
+        p.idealizer_picture
+      ORDER BY p.created_at DESC
     `;
-    
     const result = await db.query(query, [idealizerId]);
-    
-    // Buscar estatísticas de matches separadamente para cada projeto
-    const projects = result.rows;
-    
-    for (let project of projects) {
-      const matchStatsQuery = `
-        SELECT 
-          COUNT(*) as match_count,
-          COUNT(CASE WHEN status = 'accepted' THEN 1 END) as accepted_matches
-        FROM matches 
-        WHERE project_id = ?
-      `;
-      
-      const statsResult = await db.query(matchStatsQuery, [project.id]);
-      project.match_count = statsResult.rows[0].match_count;
-      project.accepted_matches = statsResult.rows[0].accepted_matches;
-    }
-    
-    return projects;
+    return result.rows;
   }
 
   static async getAll(excludeIdealizerId = null) {
