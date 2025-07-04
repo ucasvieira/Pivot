@@ -1,259 +1,160 @@
+const db = require('../config/database');
 
-const express = require('express');
-const router = express.Router();
-const { body, validationResult } = require('express-validator');
-const { ensureAuthenticated, ensureProfileComplete, ensureUserType } = require('../middleware/auth');
-const Project = require('../models/Project');
-const Skill = require('../models/Skill');
+class Project {
+  static async create(projectData) {
+    const {
+      idealizer_id, title, description, objectives, timeline, location_preference
+    } = projectData;
 
-// List all projects
-router.get('/', ensureAuthenticated, ensureProfileComplete, async (req, res) => {
-  try {
-    const projects = await Project.getAll(req.user.id);
-    
-    // Se for colaborador, verificar quais projetos já têm interesse registrado
-    let projectInterests = {};
-    if (req.user.user_type === 'collaborator') {
-      const SwipeHistory = require('../models/SwipeHistory');
-      for (const project of projects) {
-        projectInterests[project.id] = await SwipeHistory.hasUserSwipedTarget(
-          req.user.id, 
-          project.id, 
-          'project'
-        );
+    const query = `
+      INSERT INTO projects (idealizer_id, title, description, objectives, timeline, location_preference)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    const result = await db.query(query, [
+      idealizer_id, title, description, objectives, timeline, location_preference
+    ]);
+
+    return { id: result.insertId, ...projectData };
+  }
+
+  static async findById(id) {
+    // Usar view para buscar projeto com informações do idealizador
+    const query = `SELECT * FROM vw_projects_with_idealizer WHERE id = ?`;
+    const result = await db.query(query, [id]);
+    return result.rows[0];
+  }
+
+  static async findByIdealizerId(idealizerId) {
+    // Corrigir a query para incluir todas as colunas no GROUP BY
+    const query = `
+      SELECT 
+        p.id,
+        p.idealizer_id,
+        p.title,
+        p.description,
+        p.objectives,
+        p.timeline,
+        p.location_preference,
+        p.status,
+        p.created_at,
+        p.updated_at,
+        p.idealizer_email,
+        p.idealizer_first_name,
+        p.idealizer_last_name,
+        p.idealizer_location,
+        p.idealizer_picture,
+        COUNT(m.id) as match_count,
+        COUNT(CASE WHEN m.status = 'accepted' THEN 1 END) as accepted_matches
+      FROM vw_projects_with_idealizer p
+      LEFT JOIN matches m ON p.id = m.project_id
+      WHERE p.idealizer_id = ?
+      GROUP BY 
+        p.id,
+        p.idealizer_id,
+        p.title,
+        p.description,
+        p.objectives,
+        p.timeline,
+        p.location_preference,
+        p.status,
+        p.created_at,
+        p.updated_at,
+        p.idealizer_email,
+        p.idealizer_first_name,
+        p.idealizer_last_name,
+        p.idealizer_location,
+        p.idealizer_picture
+      ORDER BY p.created_at DESC
+    `;
+    const result = await db.query(query, [idealizerId]);
+    return result.rows;
+  }
+
+  static async getAll(excludeIdealizerId = null) {
+    let query = `
+      SELECT * FROM vw_projects_with_idealizer
+      WHERE status = 'active'
+    `;
+
+    const params = [];
+    if (excludeIdealizerId) {
+      query += ' AND idealizer_id != ?';
+      params.push(excludeIdealizerId);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const result = await db.query(query, params);
+    return result.rows;
+  }
+
+  static async update(id, projectData) {
+    const {
+      title, description, objectives, timeline, location_preference, status
+    } = projectData;
+
+    const query = `
+      UPDATE projects
+      SET title = ?, description = ?, objectives = ?, timeline = ?,
+          location_preference = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+
+    const result = await db.query(query, [
+      title, description, objectives, timeline, location_preference, status, id
+    ]);
+
+    return result.rows[0];
+  }
+
+  static async delete(id) {
+    const query = 'DELETE FROM projects WHERE id = ?';
+    await db.query(query, [id]);
+  }
+
+  static async getProjectsForMatching(collaboratorId) {
+    try {
+      // Usar stored procedure para buscar projetos para matching
+      console.log('🔍 Calling stored procedure for projects matching...');
+      
+      // Para stored procedures, precisamos usar uma abordagem diferente
+      const connection = await db.pool.getConnection();
+      
+      try {
+        const [results] = await connection.execute('CALL sp_get_projects_for_matching(?)', [collaboratorId]);
+        
+        // O resultado de uma stored procedure vem em um array, onde o primeiro elemento são os dados
+        const projects = results[0] || [];
+        
+        console.log(`📋 Found ${projects.length} projects for matching`);
+        return projects;
+        
+      } finally {
+        connection.release();
       }
+      
+    } catch (error) {
+      console.error('❌ Error calling stored procedure, falling back to direct query:', error);
+      
+      // Fallback para query direta se a stored procedure falhar
+      const query = `
+        SELECT DISTINCT p.*, u.email as idealizer_email, up.first_name, up.last_name,
+               up.location as idealizer_location
+        FROM projects p
+        JOIN users u ON p.idealizer_id = u.id
+        LEFT JOIN user_profiles up ON u.id = up.user_id
+        LEFT JOIN swipe_history sh ON (sh.user_id = ? AND sh.target_id = p.id AND sh.target_type = 'project')
+        WHERE p.status = 'active'
+        AND p.idealizer_id != ?
+        AND sh.id IS NULL
+        ORDER BY p.created_at DESC
+      `;
+      
+      const result = await db.query(query, [collaboratorId, collaboratorId]);
+      return result.rows;
     }
-
-    res.render('projects/list', {
-      title: 'All Projects',
-      projects,
-      projectInterests
-    });
-  } catch (error) {
-    console.error('Projects list error:', error);
-    req.flash('error', 'Error loading projects');
-    res.redirect('/dashboard');
   }
-});
+}
 
-// My projects (for idealizers)
-router.get('/my', ensureAuthenticated, ensureProfileComplete, ensureUserType('idealizer'), async (req, res) => {
-  try {
-    const projects = await Project.findByIdealizerId(req.user.id);
-    res.render('projects/my-projects', {
-      title: 'My Projects',
-      projects
-    });
-  } catch (error) {
-    console.error('My projects error:', error);
-    req.flash('error', 'Error loading your projects');
-    res.redirect('/dashboard');
-  }
-});
-
-// Create project page
-router.get('/create', ensureAuthenticated, ensureProfileComplete, ensureUserType('idealizer'), async (req, res) => {
-  try {
-    const skills = await Skill.getAll();
-    res.render('projects/create', {
-      title: 'Create New Project',
-      skills
-    });
-  } catch (error) {
-    console.error('Create project page error:', error);
-    req.flash('error', 'Error loading create project page');
-    res.redirect('/dashboard');
-  }
-});
-
-// Create project handler
-router.post('/create', ensureAuthenticated, ensureProfileComplete, ensureUserType('idealizer'), [
-  body('title').trim().isLength({ min: 3 }),
-  body('description').trim().isLength({ min: 20 }),
-  body('objectives').trim().isLength({ min: 10 }),
-  body('timeline').trim().isLength({ min: 1 }),
-  body('location_preference').trim().isLength({ min: 1 })
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      req.flash('error', 'Please fill in all required fields correctly');
-      return res.redirect('/projects/create');
-    }
-
-    const {
-      title, description, objectives, timeline, location_preference,
-      required_skills
-    } = req.body;
-
-    // Create project
-    const project = await Project.create({
-      idealizer_id: req.user.id,
-      title,
-      description,
-      objectives,
-      timeline,
-      location_preference
-    });
-
-    // Add required skills
-    if (required_skills) {
-      const skillsArray = Array.isArray(required_skills) ? required_skills : [required_skills];
-      const skillsData = skillsArray.map(skillId => ({
-        skill_id: parseInt(skillId),
-        required_level: 'intermediate' // Default level
-      }));
-      await Skill.updateProjectSkills(project.id, skillsData);
-    }
-
-    req.flash('success', 'Project created successfully!');
-    res.redirect('/projects/my');
-  } catch (error) {
-    console.error('Create project error:', error);
-    req.flash('error', 'Error creating project');
-    res.redirect('/projects/create');
-  }
-});
-
-// View project
-router.get('/view/:id', ensureAuthenticated, ensureProfileComplete, async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    
-    if (!project) {
-      req.flash('error', 'Project not found');
-      return res.redirect('/projects');
-    }
-
-    const projectSkills = await Skill.getProjectSkills(project.id);
-    
-    // Verificar se o colaborador já demonstrou interesse neste projeto
-    let hasAlreadyShownInterest = false;
-    if (req.user.user_type === 'collaborator') {
-      const SwipeHistory = require('../models/SwipeHistory');
-      hasAlreadyShownInterest = await SwipeHistory.hasUserSwipedTarget(
-        req.user.id, 
-        project.id, 
-        'project'
-      );
-    }
-
-    res.render('projects/view', {
-      title: project.title,
-      project,
-      projectSkills,
-      isOwner: project.idealizer_id == req.user.id,
-      hasAlreadyShownInterest
-    });
-  } catch (error) {
-    console.error('Project view error:', error);
-    req.flash('error', 'Error loading project');
-    res.redirect('/projects');
-  }
-});
-
-// Edit project page
-router.get('/edit/:id', ensureAuthenticated, ensureProfileComplete, ensureUserType('idealizer'), async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    
-    if (!project || project.idealizer_id != req.user.id) {
-      req.flash('error', 'Project not found or access denied');
-      return res.redirect('/projects/my');
-    }
-
-    const skills = await Skill.getAll();
-    const projectSkills = await Skill.getProjectSkills(project.id);
-
-    res.render('projects/edit', {
-      title: 'Edit Project',
-      project,
-      skills,
-      projectSkills
-    });
-  } catch (error) {
-    console.error('Edit project page error:', error);
-    req.flash('error', 'Error loading project');
-    res.redirect('/projects/my');
-  }
-});
-
-// Edit project handler
-router.post('/edit/:id', ensureAuthenticated, ensureProfileComplete, ensureUserType('idealizer'), [
-  body('title').trim().isLength({ min: 3 }),
-  body('description').trim().isLength({ min: 20 }),
-  body('objectives').trim().isLength({ min: 10 }),
-  body('timeline').trim().isLength({ min: 1 }),
-  body('location_preference').trim().isLength({ min: 1 })
-], async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    
-    if (!project || project.idealizer_id != req.user.id) {
-      req.flash('error', 'Project not found or access denied');
-      return res.redirect('/projects/my');
-    }
-
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      req.flash('error', 'Please fill in all required fields correctly');
-      return res.redirect(`/projects/edit/${req.params.id}`);
-    }
-
-    const {
-      title, description, objectives, timeline, location_preference,
-      status, required_skills
-    } = req.body;
-
-    // Update project
-    await Project.update(req.params.id, {
-      title,
-      description,
-      objectives,
-      timeline,
-      location_preference,
-      status: status || 'active'
-    });
-
-    // Update required skills
-    if (required_skills) {
-      const skillsArray = Array.isArray(required_skills) ? required_skills : [required_skills];
-      const skillsData = skillsArray.map(skillId => ({
-        skill_id: parseInt(skillId),
-        required_level: 'intermediate' // Default level
-      }));
-      await Skill.updateProjectSkills(req.params.id, skillsData);
-    } else {
-      await Skill.updateProjectSkills(req.params.id, []);
-    }
-
-    req.flash('success', 'Project updated successfully!');
-    res.redirect('/projects/my');
-  } catch (error) {
-    console.error('Update project error:', error);
-    req.flash('error', 'Error updating project');
-    res.redirect(`/projects/edit/${req.params.id}`);
-  }
-});
-
-// Delete project
-router.post('/delete/:id', ensureAuthenticated, ensureProfileComplete, ensureUserType('idealizer'), async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    
-    if (!project || project.idealizer_id != req.user.id) {
-      req.flash('error', 'Project not found or access denied');
-      return res.redirect('/projects/my');
-    }
-
-    await Project.delete(req.params.id);
-    req.flash('success', 'Project deleted successfully!');
-    res.redirect('/projects/my');
-  } catch (error) {
-    console.error('Delete project error:', error);
-    req.flash('error', 'Error deleting project');
-    res.redirect('/projects/my');
-  }
-});
-
-module.exports = router;
+module.exports = Project;

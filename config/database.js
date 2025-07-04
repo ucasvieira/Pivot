@@ -23,6 +23,29 @@ const poolConfig = process.env.DB_URL ? process.env.DB_URL : {
 
 const pool = mysql.createPool(poolConfig);
 
+// Function to configure MySQL session settings
+async function configureMySQLSession() {
+  try {
+    const connection = await pool.getConnection();
+    try {
+      // Desabilitar ONLY_FULL_GROUP_BY para compatibilidade
+      await connection.execute(`
+        SET SESSION sql_mode = (SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))
+      `);
+      console.log('✅ MySQL ONLY_FULL_GROUP_BY mode disabled for session');
+      
+      // Configurar outras opções se necessário
+      await connection.execute('SET SESSION group_concat_max_len = 1000000');
+      console.log('✅ MySQL session configured successfully');
+      
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.warn('⚠️  Could not configure MySQL session:', error.message);
+  }
+}
+
 // Function to initialize database schema (apenas em desenvolvimento)
 async function initializeDatabase() {
   if (process.env.MODE === 'Development' && process.env.NODE_ENV !== 'production') {
@@ -53,6 +76,11 @@ async function initializeDatabase() {
       });
       
       try {
+        // Configure MySQL mode for this connection too
+        await rawConnection.execute(`
+          SET SESSION sql_mode = (SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))
+        `);
+        
         // Disable foreign key checks temporarily
         await rawConnection.execute('SET FOREIGN_KEY_CHECKS = 0');
         console.log('🔓 Foreign key checks disabled');
@@ -180,34 +208,15 @@ if (process.env.DB_URL) {
   console.log(`🔗 Connecting to database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
 }
 
-
-// Function to disable ONLY_FULL_GROUP_BY mode
-async function configureMySQLMode() {
-  try {
-    const connection = await pool.getConnection();
-    try {
-      // Desabilitar ONLY_FULL_GROUP_BY para compatibilidade
-      await connection.execute(`
-        SET SESSION sql_mode = (SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))
-      `);
-      console.log('✅ MySQL ONLY_FULL_GROUP_BY mode disabled for session');
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.warn('⚠️  Could not configure MySQL mode:', error.message);
-  }
-}
-
-// E chame esta função na inicialização:
+// Test connection and initialize schema (apenas se não for produção)
 if (process.env.NODE_ENV !== 'production') {
   pool.getConnection()
     .then(async (connection) => {
       console.log('✅ Connected to MySQL database');
       connection.release();
       
-      // Configure MySQL mode
-      await configureMySQLMode();
+      // Configure MySQL session
+      await configureMySQLSession();
       
       // Initialize database schema in development mode
       await initializeDatabase();
@@ -220,6 +229,7 @@ if (process.env.NODE_ENV !== 'production') {
 module.exports = {
   pool,
   initializeDatabase,
+  configureMySQLSession,
   query: async (text, params) => {
     try {
       if (process.env.NODE_ENV !== 'production') {
@@ -227,18 +237,30 @@ module.exports = {
         console.log('With params:', params);
       }
       
-      const [result] = await pool.execute(text, params);
+      // Get connection and configure it
+      const connection = await pool.getConnection();
       
-      if (text.trim().toUpperCase().startsWith('SELECT')) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('SELECT query result rows:', result.length);
+      try {
+        // Configure session for this connection
+        await connection.execute(`
+          SET SESSION sql_mode = (SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))
+        `);
+        
+        const [result] = await connection.execute(text, params);
+        
+        if (text.trim().toUpperCase().startsWith('SELECT')) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('SELECT query result rows:', result.length);
+          }
+          return { rows: result };
+        } else {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Non-SELECT query result:', { insertId: result.insertId, affectedRows: result.affectedRows });
+          }
+          return result;
         }
-        return { rows: result };
-      } else {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('Non-SELECT query result:', { insertId: result.insertId, affectedRows: result.affectedRows });
-        }
-        return result;
+      } finally {
+        connection.release();
       }
     } catch (error) {
       console.error('Database query error:', error);
