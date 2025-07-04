@@ -58,7 +58,7 @@
                         <i class="bi bi-people display-4"></i>
                     </div>
                     <h3 class="fw-bold mb-1"><%= totalMatches || 0 %></h3>
-                    <p class="text-muted mb-0">Correspondências Totais</p>
+                    <p class="text-muted mb-0">Matches Totais</p>
                 </div>
             </div>
         </div>
@@ -104,7 +104,7 @@
                                 <%= project.description.substring(0, 100) %>...
                             </p>
                             <small class="text-muted">
-                                <i class="bi bi-people me-1"></i><%= project.match_count || 0 %> correspondências
+                                <i class="bi bi-people me-1"></i><%= project.match_count || 0 %> Matches
                             </small>
                         </div>
                         <div class="text-end">
@@ -178,12 +178,12 @@
 
         <!-- Coluna da Direita -->
         <div class="col-lg-4">
-            <!-- Correspondências Recentes -->
+            <!-- Matches Recentes -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-0 py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="h5 fw-bold mb-0">
-                            <i class="bi bi-people text-success me-2"></i>Correspondências Recentes
+                            <i class="bi bi-people text-success me-2"></i>Matches Recentes
                         </h3>
                         <a href="/match/matches" class="btn btn-sm btn-outline-success">Ver Todos</a>
                     </div>
@@ -213,9 +213,9 @@
                     <% } else { %>
                     <div class="text-center py-3">
                         <i class="bi bi-heart display-6 text-muted mb-2"></i>
-                        <p class="text-muted small mb-0">Nenhuma correspondência ainda</p>
+                        <p class="text-muted small mb-0">Nenhum match ainda</p>
                         <a href="/match/swipe" class="btn btn-sm btn-outline-primary mt-2">
-                            Começar a Correspondência
+                            Começar a dar match
                         </a>
                     </div>
                     <% } %>
@@ -247,7 +247,7 @@
                         </a>
                         <% } %>
                         <a href="/match/swipe" class="btn btn-outline-success">
-                            <i class="bi bi-heart me-2"></i>Descobrir Correspondências
+                            <i class="bi bi-heart me-2"></i>Descobrir Matches
                         </a>
                         <a href="/chat" class="btn btn-outline-info">
                             <i class="bi bi-chat-dots me-2"></i>Mensagens

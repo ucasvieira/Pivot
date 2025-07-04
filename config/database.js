@@ -34,65 +34,133 @@ async function initializeDatabase() {
       const schemaPath = path.join(__dirname, '..', 'database', 'schema.sql');
       const schemaSQL = await fs.readFile(schemaPath, 'utf8');
       
-      // Remove comments and normalize line endings
+      // Clean SQL - remove comments but keep structure
       const cleanSQL = schemaSQL
         .replace(/--.*$/gm, '')
         .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/\r\n/g, '\n')
-        .replace(/\n+/g, ' ')
         .trim();
       
-      // Split SQL statements by semicolon and filter out empty ones
-      const statements = cleanSQL
-        .split(';')
-        .map(stmt => stmt.trim())
-        .filter(stmt => stmt.length > 0);
+      console.log('📋 Executing complete SQL schema...');
       
-      const connection = await pool.getConnection();
+      // Create a raw connection with multipleStatements enabled
+      const rawConnection = await mysql.createConnection({
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        multipleStatements: true
+      });
       
       try {
         // Disable foreign key checks temporarily
-        await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+        await rawConnection.execute('SET FOREIGN_KEY_CHECKS = 0');
         console.log('🔓 Foreign key checks disabled');
         
-        console.log(`📋 Executing ${statements.length} SQL statements...`);
-        
-        // Execute each statement individually
-        for (let i = 0; i < statements.length; i++) {
-          const statement = statements[i];
-          if (statement) {
-            try {
-              const preview = statement.length > 80 
-                ? statement.substring(0, 80) + '...' 
-                : statement;
-              console.log(`   ${i + 1}/${statements.length}: ${preview}`);
-              
-              await connection.execute(statement);
-              console.log(`   ✅ Statement ${i + 1} executed successfully`);
-              
-            } catch (statementError) {
-              console.error(`❌ Error in statement ${i + 1}:`, statementError.message);
-              console.error(`   Statement: ${statement.substring(0, 200)}...`);
-            }
-          }
-        }
+        // Execute the entire SQL file at once
+        console.log('🚀 Executing complete schema...');
+        await rawConnection.query(cleanSQL);
+        console.log('✅ Schema executed successfully');
         
         // Re-enable foreign key checks
-        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+        await rawConnection.execute('SET FOREIGN_KEY_CHECKS = 1');
         console.log('🔒 Foreign key checks re-enabled');
         
         // Verify tables were created
-        const [tables] = await connection.execute('SHOW TABLES');
+        const [tables] = await rawConnection.execute('SHOW TABLES');
         console.log(`📊 Tables created: ${tables.length}`);
         tables.forEach(table => {
           const tableName = Object.values(table)[0];
           console.log(`   - ${tableName}`);
         });
         
+        // Verify functions were created
+        try {
+          const [functions] = await rawConnection.execute(`
+            SELECT ROUTINE_NAME 
+            FROM INFORMATION_SCHEMA.ROUTINES 
+            WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_TYPE = 'FUNCTION'
+          `);
+          console.log(`🔧 Functions created: ${functions.length}`);
+          functions.forEach(func => {
+            console.log(`   - ${func.ROUTINE_NAME}`);
+          });
+        } catch (error) {
+          console.log('⚠️  Could not verify functions');
+        }
+        
+        // Verify procedures were created
+        try {
+          const [procedures] = await rawConnection.execute(`
+            SELECT ROUTINE_NAME 
+            FROM INFORMATION_SCHEMA.ROUTINES 
+            WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_TYPE = 'PROCEDURE'
+          `);
+          console.log(`⚙️  Procedures created: ${procedures.length}`);
+          procedures.forEach(proc => {
+            console.log(`   - ${proc.ROUTINE_NAME}`);
+          });
+        } catch (error) {
+          console.log('⚠️  Could not verify procedures');
+        }
+        
+        // Verify triggers were created
+        try {
+          const [triggers] = await rawConnection.execute(`
+            SELECT TRIGGER_NAME 
+            FROM INFORMATION_SCHEMA.TRIGGERS 
+            WHERE TRIGGER_SCHEMA = DATABASE()
+          `);
+          console.log(`🎯 Triggers created: ${triggers.length}`);
+          triggers.forEach(trigger => {
+            console.log(`   - ${trigger.TRIGGER_NAME}`);
+          });
+        } catch (error) {
+          console.log('⚠️  Could not verify triggers');
+        }
+        
+        // Verify views were created
+        try {
+          const [views] = await rawConnection.execute(`
+            SELECT TABLE_NAME 
+            FROM INFORMATION_SCHEMA.VIEWS 
+            WHERE TABLE_SCHEMA = DATABASE()
+          `);
+          console.log(`👁️  Views created: ${views.length}`);
+          views.forEach(view => {
+            console.log(`   - ${view.TABLE_NAME}`);
+          });
+        } catch (error) {
+          console.log('⚠️  Could not verify views');
+        }
+        
         console.log('✅ Database schema initialized successfully!');
         
+      } catch (error) {
+        console.error('❌ Error executing schema:', error);
+        
+        // If there's an error, let's try to see which part failed
+        if (error.message.includes('near') || error.message.includes('syntax')) {
+          console.error('💡 SQL syntax error detected. This might be due to:');
+          console.error('   - Missing semicolons');
+          console.error('   - Incomplete stored procedures/functions');
+          console.error('   - Invalid MySQL syntax');
+          
+          // Let's try to identify the problematic area
+          const errorMatch = error.message.match(/at line (\d+)/);
+          if (errorMatch) {
+            const lineNumber = parseInt(errorMatch[1]);
+            const lines = cleanSQL.split('\n');
+            console.error(`   - Error around line ${lineNumber}:`);
+            console.error(`     ${lines[lineNumber - 2] || ''}`);
+            console.error(`   > ${lines[lineNumber - 1] || ''}`);
+            console.error(`     ${lines[lineNumber] || ''}`);
+          }
+        }
+        
+        throw error;
       } finally {
-        connection.release();
+        await rawConnection.end();
       }
       
     } catch (error) {
@@ -112,12 +180,34 @@ if (process.env.DB_URL) {
   console.log(`🔗 Connecting to database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
 }
 
-// Test connection and initialize schema (apenas se não for produção)
+
+// Function to disable ONLY_FULL_GROUP_BY mode
+async function configureMySQLMode() {
+  try {
+    const connection = await pool.getConnection();
+    try {
+      // Desabilitar ONLY_FULL_GROUP_BY para compatibilidade
+      await connection.execute(`
+        SET SESSION sql_mode = (SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))
+      `);
+      console.log('✅ MySQL ONLY_FULL_GROUP_BY mode disabled for session');
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.warn('⚠️  Could not configure MySQL mode:', error.message);
+  }
+}
+
+// E chame esta função na inicialização:
 if (process.env.NODE_ENV !== 'production') {
   pool.getConnection()
     .then(async (connection) => {
       console.log('✅ Connected to MySQL database');
       connection.release();
+      
+      // Configure MySQL mode
+      await configureMySQLMode();
       
       // Initialize database schema in development mode
       await initializeDatabase();

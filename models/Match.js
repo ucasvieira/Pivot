@@ -4,8 +4,8 @@ class Match {
   static async create(matchData) {
     const { project_id, collaborator_id, idealizer_id } = matchData;
 
-    // MySQL não tem ON CONFLICT, então verificamos primeiro se já existe
-    const existingQuery = 'SELECT * FROM matches WHERE project_id = ? AND collaborator_id = ?';
+    // Verificar se já existe usando a view
+    const existingQuery = 'SELECT * FROM vw_matches_complete WHERE project_id = ? AND collaborator_id = ?';
     const existing = await db.query(existingQuery, [project_id, collaborator_id]);
     
     if (existing.rows.length > 0) {
@@ -21,71 +21,44 @@ class Match {
     return { id: result.insertId, ...matchData, collaborator_interested: false, idealizer_interested: false, status: 'pending' };
   }
 
-  // Novo método para verificar interesse mútuo e criar match
   static async checkAndCreateMatch(projectId, collaboratorId, idealizerId) {
-    const SwipeHistory = require('./SwipeHistory');
-    
     try {
-      // Verificar se colaborador deu like no projeto
-      const collaboratorLikedProject = await SwipeHistory.getSwipeAction(collaboratorId, projectId, 'project');
+      // Usar stored procedure para verificar e criar match
+      console.log('🔍 Calling stored procedure for match creation...');
       
-      // Verificar se idealizador deu like no colaborador (através do projeto)
-      const idealizerLikedCollaborator = await SwipeHistory.getSwipeAction(idealizerId, collaboratorId, 'user', projectId);
+      const connection = await db.pool.getConnection();
       
-      console.log('Verificando match:', {
-        projectId,
-        collaboratorId,
-        idealizerId,
-        collaboratorLikedProject,
-        idealizerLikedCollaborator
-      });
-
-      // Se ambos deram like, criar ou atualizar match
-      if (collaboratorLikedProject === 'like' && idealizerLikedCollaborator === 'like') {
-        // Verificar se já existe um match para evitar duplicatas
-        const existingMatch = await this.findByUserAndProject(collaboratorId, projectId);
+      try {
+        await connection.execute('CALL sp_check_and_create_match(?, ?, ?, @match_id, @is_new_match)', 
+          [projectId, collaboratorId, idealizerId]);
         
-        let match;
-        if (existingMatch) {
-          match = existingMatch;
-        } else {
-          match = await this.create({ 
-            project_id: projectId, 
-            collaborator_id: collaboratorId, 
-            idealizer_id: idealizerId 
-          });
+        // Obter resultados
+        const [result] = await connection.execute('SELECT @match_id as match_id, @is_new_match as is_new_match');
+        const { match_id, is_new_match } = result[0];
+        
+        if (match_id) {
+          const match = await this.findById(match_id);
+          return { match, isNewMatch: Boolean(is_new_match) };
         }
         
-        // Marcar ambos como interessados
-        await this.updateInterest(match.id, 'collaborator', true);
-        await this.updateInterest(match.id, 'idealizer', true);
+        return { match: null, isNewMatch: false };
         
-        console.log('Match criado/atualizado:', match.id);
-        return { match, isNewMatch: !existingMatch };
+      } finally {
+        connection.release();
       }
       
-      return { match: null, isNewMatch: false };
     } catch (error) {
-      console.error('Erro ao verificar/criar match:', error);
-      throw error;
+      console.error('❌ Error calling stored procedure for match creation:', error);
+      
+      // Fallback para lógica direta
+      const existingMatch = await this.findByUserAndProject(collaboratorId, projectId);
+      return { match: existingMatch, isNewMatch: false };
     }
   }
 
   static async findById(id) {
-    const query = `
-      SELECT m.*, p.title as project_title, p.description as project_description,
-             u1.email as collaborator_email, up1.first_name as collaborator_first_name,
-             up1.last_name as collaborator_last_name,
-             u2.email as idealizer_email, up2.first_name as idealizer_first_name,
-             up2.last_name as idealizer_last_name
-      FROM matches m
-      JOIN projects p ON m.project_id = p.id
-      JOIN users u1 ON m.collaborator_id = u1.id
-      JOIN users u2 ON m.idealizer_id = u2.id
-      LEFT JOIN user_profiles up1 ON u1.id = up1.user_id
-      LEFT JOIN user_profiles up2 ON u2.id = up2.user_id
-      WHERE m.id = ?
-    `;
+    // Usar view para buscar match completo
+    const query = `SELECT * FROM vw_matches_complete WHERE id = ?`;
     const result = await db.query(query, [id]);
     return result.rows[0];
   }
@@ -97,106 +70,54 @@ class Match {
   }
 
   static async updateInterest(matchId, userType, interested) {
-    console.log(`Atualizando interesse - Match ID: ${matchId}, User Type: ${userType}, Interested: ${interested}`);
-    
-    // Converter para boolean explicitamente
-    const isInterested = Boolean(interested);
-    const field = userType === 'collaborator' ? 'collaborator_interested' : 'idealizer_interested';
-    
-    // Obter uma conexão do pool para usar transação
-    const connection = await db.pool.getConnection();
-    
     try {
-      // Iniciar transação usando a conexão direta
-      await connection.beginTransaction();
+      // Usar stored procedure para atualizar interesse
+      console.log('🔍 Calling stored procedure for match interest update...');
       
-      // Atualizar o interesse
-      const updateQuery = `UPDATE matches SET ${field} = ? WHERE id = ?`;
-      await connection.execute(updateQuery, [isInterested, matchId]);
+      const connection = await db.pool.getConnection();
       
-      // Buscar o match atualizado
-      const matchQuery = 'SELECT * FROM matches WHERE id = ?';
-      const [matchRows] = await connection.execute(matchQuery, [matchId]);
-      const match = matchRows[0];
-      
-      if (!match) {
-        console.log(`Match não encontrado: ${matchId}`);
-        await connection.rollback();
-        return null;
-      }
-
-      console.log(`Estado atual do match:`, {
-        id: match.id,
-        collaborator_interested: match.collaborator_interested,
-        idealizer_interested: match.idealizer_interested,
-        status: match.status
-      });
-
-      // Verificar se ambas as partes estão interessadas
-      const collaboratorInterested = Boolean(match.collaborator_interested);
-      const idealizerInterested = Boolean(match.idealizer_interested);
-      
-      if (collaboratorInterested && idealizerInterested && match.status !== 'accepted') {
-        console.log('Ambas as partes interessadas! Atualizando status para accepted e criando conversa');
+      try {
+        await connection.execute('CALL sp_update_match_interest(?, ?, ?, @conversation_id)', 
+          [matchId, userType, Boolean(interested)]);
         
-        // Atualizar o status do match
-        await connection.execute('UPDATE matches SET status = ? WHERE id = ?', ['accepted', matchId]);
+        // Obter ID da conversa se foi criada
+        const [result] = await connection.execute('SELECT @conversation_id as conversation_id');
+        const conversationId = result[0].conversation_id;
         
-        // Verificar se já existe uma conversa para este match
-        const existingConversationQuery = 'SELECT * FROM conversations WHERE match_id = ?';
-        const [existingConversationRows] = await connection.execute(existingConversationQuery, [matchId]);
+        // Buscar match atualizado
+        const match = await this.findById(matchId);
         
-        if (existingConversationRows.length === 0) {
-          // Criar uma nova conversa
-          const createConversationQuery = 'INSERT INTO conversations (match_id) VALUES (?)';
-          const [conversationResult] = await connection.execute(createConversationQuery, [matchId]);
-          
-          console.log(`Conversa criada com ID: ${conversationResult.insertId} para match ${matchId}`);
-        } else {
-          console.log(`Conversa já existe para match ${matchId}: ID ${existingConversationRows[0].id}`);
+        if (conversationId) {
+          console.log(`✅ Conversa criada com ID: ${conversationId} para match ${matchId}`);
         }
         
-        // Buscar novamente para retornar dados atualizados
-        const [updatedMatchRows] = await connection.execute(matchQuery, [matchId]);
-        const updatedMatch = updatedMatchRows[0];
+        return match;
         
-        // Confirmar transação
-        await connection.commit();
-        
-        console.log(`Match aceito e conversa criada! Match ID: ${matchId}`);
-        return updatedMatch;
+      } finally {
+        connection.release();
       }
       
-      // Confirmar transação para mudanças simples de interesse
-      await connection.commit();
-      return match;
-      
     } catch (error) {
-      // Reverter transação em caso de erro
-      await connection.rollback();
-      console.error('Erro ao processar match:', error);
-      throw error;
-    } finally {
-      // Sempre liberar a conexão
-      connection.release();
+      console.error('❌ Error calling stored procedure for match interest:', error);
+      
+      // Fallback para query direta
+      const userIdField = userType === 'collaborator' ? 'collaborator_interested' : 'idealizer_interested';
+      const query = `UPDATE matches SET ${userIdField} = ? WHERE id = ?`;
+      await db.query(query, [Boolean(interested), matchId]);
+      
+      return await this.findById(matchId);
     }
   }
 
   static async getUserMatches(userId, userType) {
     const isCollaborator = userType === 'collaborator';
     const userIdField = isCollaborator ? 'collaborator_id' : 'idealizer_id';
-    const otherUserIdField = isCollaborator ? 'idealizer_id' : 'collaborator_id';
 
+    // Usar view para buscar matches
     const query = `
-      SELECT m.*, p.title as project_title, p.description as project_description,
-             u.email as other_user_email, up.first_name as other_user_first_name,
-             up.last_name as other_user_last_name, up.profile_picture as other_user_picture
-      FROM matches m
-      JOIN projects p ON m.project_id = p.id
-      JOIN users u ON m.${otherUserIdField} = u.id
-      LEFT JOIN user_profiles up ON u.id = up.user_id
-      WHERE m.${userIdField} = ?
-      ORDER BY m.created_at DESC
+      SELECT * FROM vw_matches_complete 
+      WHERE ${userIdField} = ?
+      ORDER BY created_at DESC
     `;
 
     const result = await db.query(query, [userId]);
@@ -204,67 +125,69 @@ class Match {
   }
 
   static async getAcceptedMatches(userId) {
+    // Usar view para buscar matches aceitos
     const query = `
-      SELECT m.*, p.title as project_title, p.description as project_description,
-             u1.email as collaborator_email, up1.first_name as collaborator_first_name,
-             up1.last_name as collaborator_last_name, up1.profile_picture as collaborator_picture,
-             u2.email as idealizer_email, up2.first_name as idealizer_first_name,
-             up2.last_name as idealizer_last_name, up2.profile_picture as idealizer_picture,
-             c.id as conversation_id
-      FROM matches m
-      JOIN projects p ON m.project_id = p.id
-      JOIN users u1 ON m.collaborator_id = u1.id
-      JOIN users u2 ON m.idealizer_id = u2.id
-      LEFT JOIN user_profiles up1 ON u1.id = up1.user_id
-      LEFT JOIN user_profiles up2 ON u2.id = up2.user_id
-      LEFT JOIN conversations c ON c.match_id = m.id
-      WHERE (m.collaborator_id = ? OR m.idealizer_id = ?) 
-      AND m.status = 'accepted'
-      ORDER BY m.created_at DESC
+      SELECT mc.*, c.id as conversation_id
+      FROM vw_matches_complete mc
+      LEFT JOIN conversations c ON c.match_id = mc.id
+      WHERE (mc.collaborator_id = ? OR mc.idealizer_id = ?) 
+      AND mc.status = 'accepted'
+      ORDER BY mc.created_at DESC
     `;
 
     const result = await db.query(query, [userId, userId]);
     return result.rows;
   }
 
-  // Método para buscar matches pendentes (onde apenas um lado manifestou interesse)
   static async getPendingMatches(userId, userType) {
     const isCollaborator = userType === 'collaborator';
     const userIdField = isCollaborator ? 'collaborator_id' : 'idealizer_id';
-    const otherUserIdField = isCollaborator ? 'idealizer_id' : 'collaborator_id';
     const userInterestedField = isCollaborator ? 'collaborator_interested' : 'idealizer_interested';
 
     const query = `
-      SELECT m.*, p.title as project_title, p.description as project_description,
-             u.email as other_user_email, up.first_name as other_user_first_name,
-             up.last_name as other_user_last_name, up.profile_picture as other_user_picture
-      FROM matches m
-      JOIN projects p ON m.project_id = p.id
-      JOIN users u ON m.${otherUserIdField} = u.id
-      LEFT JOIN user_profiles up ON u.id = up.user_id
-      WHERE m.${userIdField} = ?
-      AND m.status = 'pending'
-      AND m.${userInterestedField} = false
-      ORDER BY m.created_at DESC
+      SELECT * FROM vw_matches_complete
+      WHERE ${userIdField} = ?
+      AND status = 'pending'
+      AND ${userInterestedField} = false
+      ORDER BY created_at DESC
     `;
 
     const result = await db.query(query, [userId]);
     return result.rows;
   }
 
-  // Método para contar matches por status
   static async getMatchStats(userId) {
-    const query = `
-      SELECT 
-        COUNT(*) as total_matches,
-        SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted_matches,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_matches
-      FROM matches 
-      WHERE collaborator_id = ? OR idealizer_id = ?
-    `;
+    try {
+      // Usar functions para obter estatísticas
+      const query = `
+        SELECT 
+          fn_count_user_matches(?, NULL) as total_matches,
+          fn_count_user_matches(?, 'accepted') as accepted_matches,
+          fn_count_user_matches(?, 'pending') as pending_matches
+      `;
 
-    const result = await db.query(query, [userId, userId]);
-    return result.rows[0];
+      const result = await db.query(query, [userId, userId, userId]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Error calling functions for match stats:', error);
+      
+      // Fallback para queries diretas
+      const totalQuery = 'SELECT COUNT(*) as total_matches FROM matches WHERE collaborator_id = ? OR idealizer_id = ?';
+      const acceptedQuery = 'SELECT COUNT(*) as accepted_matches FROM matches WHERE (collaborator_id = ? OR idealizer_id = ?) AND status = "accepted"';
+      const pendingQuery = 'SELECT COUNT(*) as pending_matches FROM matches WHERE (collaborator_id = ? OR idealizer_id = ?) AND status = "pending"';
+      
+      const [total, accepted, pending] = await Promise.all([
+        db.query(totalQuery, [userId, userId]),
+        db.query(acceptedQuery, [userId, userId]),
+        db.query(pendingQuery, [userId, userId])
+      ]);
+      
+      return {
+        total_matches: total.rows[0].total_matches,
+        accepted_matches: accepted.rows[0].accepted_matches,
+        pending_matches: pending.rows[0].pending_matches
+      };
+    }
   }
 }
 

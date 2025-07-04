@@ -19,6 +19,7 @@ class Profile {
       experience_level, contact_info, portfolio_links, availability
     ]);
 
+    // O trigger tr_profile_complete_insert irá automaticamente marcar o perfil como completo
     return result;
   }
 
@@ -42,7 +43,7 @@ class Profile {
       user_id
     ]);
 
-    // Verificar se a atualização foi bem-sucedida
+    // O trigger tr_profile_complete_update irá automaticamente marcar o perfil como completo
     if (result.affectedRows === 0) {
       throw new Error('Profile not found or no changes made');
     }
@@ -54,7 +55,6 @@ class Profile {
     const query = 'SELECT * FROM user_profiles WHERE user_id = ?';
     const result = await db.query(query, [user_id]);
     
-    // Retornar o primeiro resultado ou null se não encontrar
     return result.rows && result.rows.length > 0 ? result.rows[0] : null;
   }
 
@@ -63,7 +63,6 @@ class Profile {
       console.log('🔍 Profile upsert for user:', user_id);
       console.log('📝 Profile data:', profileData);
       
-      // Verificar se o perfil já existe
       const existingProfile = await this.findByUserId(user_id);
       console.log('📋 Existing profile:', existingProfile ? 'Found' : 'Not found');
 
@@ -75,10 +74,8 @@ class Profile {
         await this.create({ user_id, ...profileData });
       }
 
-      // Marcar perfil como completo
-      const User = require('./User');
-      await User.updateProfileComplete(user_id, true);
-      console.log('✅ Profile marked as complete');
+      // Os triggers já marcam o perfil como completo automaticamente
+      console.log('✅ Profile marked as complete by trigger');
 
       return true;
     } catch (error) {

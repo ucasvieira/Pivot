@@ -33,23 +33,11 @@ class Conversation {
   }
 
   static async getUserConversations(userId) {
+    // Usar view para buscar conversas com última mensagem
     const query = `
-      SELECT c.*, m.project_id, p.title as project_title,
-             u1.id as collaborator_id, up1.first_name as collaborator_first_name,
-             up1.last_name as collaborator_last_name, up1.profile_picture as collaborator_picture,
-             u2.id as idealizer_id, up2.first_name as idealizer_first_name,
-             up2.last_name as idealizer_last_name, up2.profile_picture as idealizer_picture,
-             (SELECT msg.message FROM messages msg WHERE msg.conversation_id = c.id ORDER BY msg.created_at DESC LIMIT 1) as last_message,  
-             (SELECT msg.created_at FROM messages msg WHERE msg.conversation_id = c.id ORDER BY msg.created_at DESC LIMIT 1) as last_message_time
-      FROM conversations c
-      JOIN matches m ON c.match_id = m.id
-      JOIN projects p ON m.project_id = p.id
-      JOIN users u1 ON m.collaborator_id = u1.id
-      JOIN users u2 ON m.idealizer_id = u2.id
-      LEFT JOIN user_profiles up1 ON u1.id = up1.user_id
-      LEFT JOIN user_profiles up2 ON u2.id = up2.user_id
-      WHERE (m.collaborator_id = ? OR m.idealizer_id = ?) AND m.status = 'accepted'
-      ORDER BY last_message_time DESC, c.created_at DESC
+      SELECT * FROM vw_conversations_with_last_message
+      WHERE (collaborator_id = ? OR idealizer_id = ?)
+      ORDER BY last_message_time DESC, created_at DESC
     `;
 
     const result = await db.query(query, [userId, userId]);
