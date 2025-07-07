@@ -210,6 +210,7 @@ router.get('/edit/:id', async (req, res) => {
     const selectedSkillIds = projectSkills.map(ps => ps.skill_id);
 
     res.render('projects/edit', {
+    projectSkills,
     project,
     skills,
     selectedSkillIds,
