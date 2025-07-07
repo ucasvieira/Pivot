@@ -1,3 +1,4 @@
+
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 
@@ -7,12 +8,13 @@ class User {
 
     let hashedPassword = null;
     if (password) {
-      hashedPassword = await bcrypt.hash(password, 10);
+      hashedPassword = password;
+      console.log('hashedPassword:', hashedPassword); // Debug
     }
 
     const query = `
-      INSERT INTO users (email, password, user_type, github_id, google_id)
-      VALUES (?, ?, ?, ?, ?)
+    INSERT INTO users (email, password, user_type, github_id, google_id)
+    VALUES (?, ?, ?, ?, ?)
     `;
 
     const result = await db.query(query, [
@@ -32,6 +34,22 @@ class User {
       github_id: github_id || null,
       google_id: google_id || null
     };
+  }
+
+  static async findByEmail(email) {
+    const query = 'SELECT * FROM users WHERE email = ?';
+    const result = await db.query(query, [email]);
+    return result.rows[0];
+  }
+
+  static async verifyPassword(user, password) {
+    if (!user || !user.password) {
+      console.log('User or password is missing:', user); // Debug
+      return false;
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match result:', isMatch); // Debug
+    return isMatch;
   }
 
   // ADICIONE ESTE MÉTODO - é o que está faltando
@@ -76,12 +94,6 @@ class User {
     return result.rows[0];
   }
 
-  static async findByEmail(email) {
-    const query = 'SELECT * FROM users WHERE email = ?';
-    const result = await db.query(query, [email]);
-    return result.rows[0];
-  }
-
   static async findByGitHubId(githubId) {
     const query = 'SELECT * FROM users WHERE github_id = ?';
     const result = await db.query(query, [githubId]);
@@ -101,12 +113,12 @@ class User {
 
   static async getWithProfile(id) {
     const query = `
-      SELECT u.*, up.first_name, up.last_name, up.bio, up.location,
-             up.experience_level, up.contact_info, up.portfolio_links,
-             up.availability, up.profile_picture
-      FROM users u
-      LEFT JOIN user_profiles up ON u.id = up.user_id
-      WHERE u.id = ?
+    SELECT u.*, up.first_name, up.last_name, up.bio, up.location,
+    up.experience_level, up.contact_info, up.portfolio_links,
+    up.availability, up.profile_picture
+    FROM users u
+    LEFT JOIN user_profiles up ON u.id = up.user_id
+    WHERE u.id = ?
     `;
     const result = await db.query(query, [id]);
     return result.rows[0];
@@ -114,12 +126,12 @@ class User {
 
   static async getAllCollaborators(excludeUserId = null) {
     let query = `
-      SELECT u.id, u.email, u.user_type, up.first_name, up.last_name,
-             up.bio, up.location, up.experience_level, up.availability,
-             up.profile_picture
-      FROM users u
-      LEFT JOIN user_profiles up ON u.id = up.user_id
-      WHERE u.user_type = 'collaborator' AND u.is_profile_complete = true
+    SELECT u.id, u.email, u.user_type, up.first_name, up.last_name,
+    up.bio, up.location, up.experience_level, up.availability,
+    up.profile_picture
+    FROM users u
+    LEFT JOIN user_profiles up ON u.id = up.user_id
+    WHERE u.user_type = 'collaborator' AND u.is_profile_complete = true
     `;
 
     const params = [];
@@ -136,22 +148,21 @@ class User {
 
   static async getCollaboratorsForMatching(idealizerId, projectId) {
     const query = `
-      SELECT DISTINCT u.*, up.first_name, up.last_name, up.bio, up.location,
-             up.experience_level, up.profile_picture
-      FROM users u
-      JOIN user_profiles up ON u.id = up.user_id
-      LEFT JOIN swipe_history sh ON (sh.user_id = ? AND sh.target_id = u.id AND sh.target_type = 'user' AND sh.project_context_id = ?)
-      WHERE u.user_type = 'collaborator'
-      AND u.is_profile_complete = true
-      AND u.id != ?
-      AND sh.id IS NULL
-      ORDER BY u.created_at DESC
+    SELECT DISTINCT u.*, up.first_name, up.last_name, up.bio, up.location,
+    up.experience_level, up.profile_picture
+    FROM users u
+    JOIN user_profiles up ON u.id = up.user_id
+    LEFT JOIN swipe_history sh ON (sh.user_id = ? AND sh.target_id = u.id AND sh.target_type = 'user' AND sh.project_context_id = ?)
+    WHERE u.user_type = 'collaborator'
+    AND u.is_profile_complete = true
+    AND u.id != ?
+    AND sh.id IS NULL
+    ORDER BY u.created_at DESC
     `;
-  
+
     const result = await db.query(query, [idealizerId, projectId, idealizerId]);
     return result.rows;
   }
-
 
   static async updateUserType(userId, userType) {
     try {

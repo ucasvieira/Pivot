@@ -1,3 +1,4 @@
+
 const express = require('express');
 const passport = require('passport');
 const bcrypt = require('bcryptjs');
@@ -25,6 +26,10 @@ const checkOAuthAvailable = (provider) => {
   };
 };
 
+router.get('/register', (req, res) => {
+  res.render('auth/register', { title: 'Cadastro' });
+});
+
 // Login page
 router.get('/login', (req, res) => {
   const isGoogleAvailable = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
@@ -37,11 +42,6 @@ router.get('/login', (req, res) => {
   });
 });
 
-// Register page
-router.get('/register', (req, res) => {
-  res.render('auth/register', { title: 'Cadastro' });
-});
-
 // Local login
 router.post('/login',
   [
@@ -52,8 +52,12 @@ router.post('/login',
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       req.flash('error', errors.array()[0].msg);
+      console.log('Validation errors:', errors.array()[0].msg); // Debug
       return res.redirect('/auth/login');
     }
+
+    console.log('🔍 Local login - Received email:', req.body.email); // Debug
+    console.log('🔍 Local login - Received password:', req.body.password); // Debug
 
     passport.authenticate('local', {
       successRedirect: '/profile/setup',

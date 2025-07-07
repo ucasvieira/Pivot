@@ -43,7 +43,7 @@ CREATE TABLE sessions (
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255),
+    password VARCHAR(60),
     user_type ENUM('idealizer', 'collaborator') NULL,
     github_id VARCHAR(255),
     google_id VARCHAR(255),

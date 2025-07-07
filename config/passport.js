@@ -1,3 +1,4 @@
+
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -5,7 +6,37 @@ const GitHubStrategy = require('passport-github2').Strategy;
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-// Serialize/Deserialize user
+passport.use(new LocalStrategy({
+  usernameField: 'email',
+  passwordField: 'password'
+}, async (email, password, done) => {
+  try {
+    console.log('🔍 Local strategy - searching user:', email);
+    const user = await User.findByEmail(email);
+    console.log('Executing query: SELECT * FROM users WHERE email = ?', [email]);
+    if (!user) {
+      console.log('❌ User not found:', email);
+      return done(null, false, { message: 'Usuário não encontrado' });
+    }
+    console.log('✅ User found:', user);
+    
+    // Debug logs for password verification
+    console.log('🔍 Password entered:', password);
+    console.log('🔍 Hashed password in database:', user.password);
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('🔐 Password match:', isMatch);
+    if (!isMatch) {
+      console.log('❌ Password mismatch for:', email);
+      return done(null, false, { message: 'Senha incorreta' });
+    }
+    return done(null, user);
+  } catch (error) {
+    console.error('Error in local strategy:', error);
+    return done(error);
+  }
+}));
+
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
@@ -15,46 +46,9 @@ passport.deserializeUser(async (id, done) => {
     const user = await User.findById(id);
     done(null, user);
   } catch (error) {
-    done(error, null);
+    done(error);
   }
 });
-
-// Local Strategy
-passport.use(new LocalStrategy({
-  usernameField: 'email'
-}, async (email, password, done) => {
-  try {
-    console.log('🔍 Local strategy - searching user:', email);
-    const user = await User.findByEmail(email);
-    
-    if (!user) {
-      console.log('❌ User not found:', email);
-      return done(null, false, { message: 'Email não encontrado' });
-    }
-
-    console.log('✅ User found:', { id: user.id, email: user.email });
-
-    // Verificar se usuário tem senha (pode ser OAuth)
-    if (!user.password) {
-      console.log('❌ User has no password (OAuth user):', email);
-      return done(null, false, { message: 'Use login social para esta conta' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log('🔐 Password match:', isMatch);
-    
-    if (!isMatch) {
-      console.log('❌ Password mismatch for:', email);
-      return done(null, false, { message: 'Senha incorreta' });
-    }
-
-    console.log('✅ Authentication successful for:', email);
-    return done(null, user);
-  } catch (error) {
-    console.error('❌ Local strategy error:', error);
-    return done(error);
-  }
-}));
 
 // Google Strategy (apenas se as variáveis estiverem configuradas)
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -69,7 +63,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         email: profile.emails[0].value,
         name: profile.displayName
       });
-    
+      
       // Verificar se usuário já existe
       let user = await User.findByGoogleId(profile.id);
       
@@ -77,7 +71,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         console.log('✅ Existing Google user found:', user.id);
         return done(null, user);
       }
-    
+      
       // Verificar se existe usuário com mesmo email
       user = await User.findByEmail(profile.emails[0].value);
       
@@ -85,7 +79,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         console.log('📧 User with same email exists, linking Google account');
         return done(null, false, { message: 'Email já está em uso com outro método de login' });
       }
-    
+      
       // Criar novo usuário SEM user_type definido
       console.log('➕ Creating new Google user');
       user = await User.create({
@@ -94,10 +88,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         user_type: null, // ← Mudança aqui: não definir tipo ainda
         google_id: profile.id
       });
-    
+      
       console.log('✅ New Google user created:', user.id);
       return done(null, user);
-    
+      
     } catch (error) {
       console.error('❌ Google OAuth error:', error);
       return done(error);

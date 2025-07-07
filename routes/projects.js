@@ -163,8 +163,6 @@ router.get('/view/:id', async (req, res) => {
     // Verificar se o usuário já demonstrou interesse (se for colaborador)
     let hasInterest = false;
     if (req.user.user_type === 'collaborator') {
-      // Implementar verificação de interesse
-      // For now, let's assume a placeholder function
       hasInterest = await SwipeHistory.hasUserSwipedTarget(req.user.id, projectId, 'project', null);
     }
 
